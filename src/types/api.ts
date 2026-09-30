@@ -19,6 +19,7 @@ export type SiteSettings = {
 export type PublicConfigResponse = {
   name: string
   registrationOpen: boolean
+  uploadMaxFileSizeMB: number | null
 }
 
 export type MeResponse = { user: AuthUser | null }

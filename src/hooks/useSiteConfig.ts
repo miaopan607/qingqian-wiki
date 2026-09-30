@@ -5,6 +5,7 @@ import type { PublicConfigResponse } from '../types/api'
 const FALLBACK_CONFIG: PublicConfigResponse = {
   name: '清浅 Wiki',
   registrationOpen: true,
+  uploadMaxFileSizeMB: null,
 }
 
 let cached: Promise<PublicConfigResponse> | null = null

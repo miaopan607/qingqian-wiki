@@ -5,8 +5,15 @@ import { ImageProcessingError } from '../utils/appError'
 import { logger } from '../utils/logger'
 import { buildObjectKey, getStorageDriver, type StorageDriverId } from './storage'
 
-export const UPLOAD_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
-export const UPLOAD_MAX_FILE_SIZE_MB = 20
+// 单张上传上限由环境变量配置，无效值沿用默认 20 MiB。
+const configuredUploadMaxMB = Number(process.env.UPLOAD_MAX_FILE_SIZE_MB)
+export const UPLOAD_MAX_FILE_SIZE_MB =
+  Number.isSafeInteger(configuredUploadMaxMB) &&
+  configuredUploadMaxMB > 0 &&
+  Number.isSafeInteger(configuredUploadMaxMB * 1024 * 1024)
+    ? configuredUploadMaxMB
+    : 20
+export const UPLOAD_MAX_FILE_SIZE_BYTES = UPLOAD_MAX_FILE_SIZE_MB * 1024 * 1024
 export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'] as const
 export const ALLOWED_IMAGE_MIME_TYPES = [
   'image/jpeg',

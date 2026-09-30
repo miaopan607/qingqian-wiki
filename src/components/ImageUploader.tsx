@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ImagePlus, Star, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 
+import { useSiteConfig } from '../hooks/useSiteConfig'
 import { apiDelete, apiUpload } from '../lib/apiClient'
 import { getErrorMessage } from '../lib/errorHandler'
 import { formatFileSize } from '../lib/format'
@@ -10,7 +11,6 @@ import { Button, IconButton, Spinner, cn } from './ui'
 import { useToast } from './Toast'
 
 const ACCEPTED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp']
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 const DEFAULT_MAX_IMAGES = 50
 
 type UploadItem = {
@@ -37,11 +37,14 @@ export function ImageUploader({
   hint,
 }: ImageUploaderProps) {
   const toast = useToast()
+  const { config, loading: configLoading } = useSiteConfig()
+  const uploadMaxFileSizeMB = config.uploadMaxFileSizeMB
   const inputRef = useRef<HTMLInputElement>(null)
   const [items, setItems] = useState<UploadItem[]>([])
   const [dragging, setDragging] = useState(false)
 
   const uploadFiles = async (files: File[]) => {
+    if (configLoading) return
     const accepted: File[] = []
 
     for (const file of files) {
@@ -56,8 +59,8 @@ export function ImageUploader({
         })
         continue
       }
-      if (file.size > MAX_FILE_SIZE_BYTES) {
-        toast.show({ title: `${file.name} 超过 20MB`, tone: 'error' })
+      if (uploadMaxFileSizeMB !== null && file.size > uploadMaxFileSizeMB * 1024 * 1024) {
+        toast.show({ title: `${file.name} 超过 ${uploadMaxFileSizeMB}MB`, tone: 'error' })
         continue
       }
       accepted.push(file)
@@ -189,13 +192,15 @@ export function ImageUploader({
         <ImagePlus className="size-6 text-ink-muted" aria-hidden="true" />
         <p className="text-sm text-ink">拖拽图片到此处，或点击选择文件</p>
         <p className="text-xs text-ink-muted">
-          支持 {ACCEPTED_EXTENSIONS.join('、')}，单张不超过 20MB，最多 {max} 张
+          支持 {ACCEPTED_EXTENSIONS.join('、')}
+          {uploadMaxFileSizeMB !== null && `，单张不超过 ${uploadMaxFileSizeMB}MB`}，最多 {max} 张
         </p>
         <Button
           variant="outline"
           size="sm"
           leftIcon={<Upload className="size-4" />}
           onClick={() => inputRef.current?.click()}
+          disabled={configLoading}
         >
           选择图片
         </Button>

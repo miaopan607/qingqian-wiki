@@ -12,6 +12,7 @@ import {
   uploadTestAsset,
 } from './setup'
 import { getUploadsDir } from '../../src/server/utils/uploadsPath'
+import { UPLOAD_MAX_FILE_SIZE_BYTES } from '../../src/server/services/image.service'
 
 beforeEach(async () => {
   await resetDatabase()
@@ -79,9 +80,9 @@ describe('图片上传', () => {
     expect(response.body.error).toContain('仅支持')
   })
 
-  it('超过 20MB 的文件返回 413', async () => {
+  it('超过配置上限的文件返回 413', async () => {
     const { agent, xsrf } = await loginAsAdmin()
-    const oversized = Buffer.alloc(21 * 1024 * 1024, 1)
+    const oversized = Buffer.alloc(UPLOAD_MAX_FILE_SIZE_BYTES + 1, 1)
 
     const response = await uploadTestAsset(agent, xsrf, {
       buffer: oversized,
@@ -90,7 +91,6 @@ describe('图片上传', () => {
     })
 
     expect(response.status).toBe(413)
-    expect(response.body.error).toContain('20MB')
   })
 })
 

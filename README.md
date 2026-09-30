@@ -146,6 +146,13 @@ volumes:
   - ./uploads:/app/uploads # 需先执行 chown -R 1001:1001 ./uploads
 ```
 
+单张图片上传上限通过 `.env` 的 `UPLOAD_MAX_FILE_SIZE_MB` 配置，默认 `20`，
+单位为 MiB（1 MiB = 1024 × 1024 字节），仅接受正整数；留空或无效值使用默认值。
+例如 `UPLOAD_MAX_FILE_SIZE_MB=50` 表示允许单张图片最多 50 MiB，前端自动读取服务端上限。
+修改后重启服务；Docker Compose 部署需运行 `docker compose up -d --force-recreate app`。
+Nginx 的 `client_max_body_size` 需略大于文件上限，为 multipart 请求体留出空间；
+提高上限也会增加上传时的内存占用。
+
 对外建议用 Nginx 反代并配置 HTTPS：
 
 ```nginx
