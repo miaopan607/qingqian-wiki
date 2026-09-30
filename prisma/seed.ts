@@ -9,7 +9,6 @@ const prisma = new PrismaClient()
 // 站点默认配置：只在缺失时写入，不覆盖后台已改动的值
 const DEFAULT_CONFIG: Array<{ key: string; value: unknown }> = [
   { key: 'site.name', value: '清浅 Wiki' },
-  { key: 'site.description', value: '清浅 · 美图与键帽档案' },
   { key: 'site.registrationOpen', value: true },
   { key: 'storage.driver', value: 'local' },
 ]

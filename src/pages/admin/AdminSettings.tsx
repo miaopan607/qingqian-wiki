@@ -29,7 +29,6 @@ export default function AdminSettings() {
   )
 
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [storageDriver, setStorageDriver] = useState<'local' | 's3'>('local')
   const [saving, setSaving] = useState(false)
@@ -40,7 +39,6 @@ export default function AdminSettings() {
   useEffect(() => {
     if (!settings.data) return
     setName(settings.data.settings.name)
-    setDescription(settings.data.settings.description)
     setRegistrationOpen(settings.data.settings.registrationOpen)
     setStorageDriver(settings.data.settings.storageDriver)
   }, [settings.data])
@@ -57,7 +55,6 @@ export default function AdminSettings() {
     try {
       await apiPatch<AdminSettingsResponse>('/api/admin/settings', {
         name: name.trim(),
-        description: description.trim(),
         registrationOpen,
         storageDriver,
       })
@@ -113,19 +110,6 @@ export default function AdminSettings() {
               maxLength={30}
               value={name}
               onChange={(event) => setName(event.target.value)}
-            />
-          </Field>
-          <Field
-            label="站点简介"
-            htmlFor="site-description"
-            error={fieldErrors.description}
-            hint="展示在首页与页脚，最多 100 字"
-          >
-            <Input
-              id="site-description"
-              maxLength={100}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
             />
           </Field>
 

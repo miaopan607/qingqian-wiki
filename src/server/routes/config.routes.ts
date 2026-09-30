@@ -12,7 +12,6 @@ router.get(
     const settings = await getSiteSettings()
     res.json({
       name: settings.name,
-      description: settings.description,
       registrationOpen: settings.registrationOpen,
     })
   })

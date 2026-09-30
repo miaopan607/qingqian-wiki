@@ -4,7 +4,6 @@ import type { PublicConfigResponse } from '../types/api'
 
 const FALLBACK_CONFIG: PublicConfigResponse = {
   name: '清浅 Wiki',
-  description: '清浅 · 美图与键帽档案',
   registrationOpen: true,
 }
 

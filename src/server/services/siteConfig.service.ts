@@ -6,21 +6,18 @@ export type StorageDriverSetting = 'local' | 's3'
 
 export type SiteSettings = {
   name: string
-  description: string
   registrationOpen: boolean
   storageDriver: StorageDriverSetting
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   name: '清浅 Wiki',
-  description: '清浅 · 美图与键帽档案',
   registrationOpen: true,
   storageDriver: 'local',
 }
 
 const CONFIG_KEYS = {
   name: 'site.name',
-  description: 'site.description',
   registrationOpen: 'site.registrationOpen',
   storageDriver: 'storage.driver',
 } as const
@@ -39,16 +36,11 @@ export async function getSiteSettings(): Promise<SiteSettings> {
   const valueByKey = new Map(rows.map((row) => [row.key, row.value]))
 
   const name = valueByKey.get(CONFIG_KEYS.name)
-  const description = valueByKey.get(CONFIG_KEYS.description)
   const registrationOpen = valueByKey.get(CONFIG_KEYS.registrationOpen)
   const storageDriver = valueByKey.get(CONFIG_KEYS.storageDriver)
 
   const settings: SiteSettings = {
     name: typeof name === 'string' && name.trim() ? name : DEFAULT_SITE_SETTINGS.name,
-    description:
-      typeof description === 'string' && description.trim()
-        ? description
-        : DEFAULT_SITE_SETTINGS.description,
     registrationOpen:
       typeof registrationOpen === 'boolean'
         ? registrationOpen
@@ -67,7 +59,6 @@ export async function updateSiteSettings(patch: Partial<SiteSettings>): Promise<
 
   const updates: Array<[string, unknown]> = []
   if (patch.name !== undefined) updates.push([CONFIG_KEYS.name, patch.name])
-  if (patch.description !== undefined) updates.push([CONFIG_KEYS.description, patch.description])
   if (patch.registrationOpen !== undefined) {
     updates.push([CONFIG_KEYS.registrationOpen, patch.registrationOpen])
   }

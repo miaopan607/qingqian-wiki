@@ -24,9 +24,6 @@ export default function Home() {
     <div className="mx-auto w-full max-w-6xl px-4 pb-8">
       <section className="flex flex-col items-center gap-5 py-16 text-center md:py-24">
         <h1 className="font-serif text-4xl tracking-[0.2em] text-ink md:text-5xl">{config.name}</h1>
-        <p className="max-w-xl text-sm leading-relaxed text-ink-muted md:text-base">
-          {config.description}
-        </p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
           <LinkButton to="/gallery" size="lg" leftIcon={<ImageIcon className="size-4" />}>
             浏览美图

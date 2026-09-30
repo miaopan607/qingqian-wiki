@@ -12,14 +12,12 @@ import type {
 
 export type SiteSettings = {
   name: string
-  description: string
   registrationOpen: boolean
   storageDriver: 'local' | 's3'
 }
 
 export type PublicConfigResponse = {
   name: string
-  description: string
   registrationOpen: boolean
 }
 

@@ -1,7 +1,6 @@
 import { z } from 'zod'
 
 export const SITE_NAME_MAX_LENGTH = 30
-export const SITE_DESCRIPTION_MAX_LENGTH = 100
 
 export const siteSettingsSchema = z
   .object({
@@ -10,11 +9,6 @@ export const siteSettingsSchema = z
       .trim()
       .min(1, '站点名称不能为空')
       .max(SITE_NAME_MAX_LENGTH, `站点名称最多 ${SITE_NAME_MAX_LENGTH} 个字符`)
-      .optional(),
-    description: z
-      .string()
-      .trim()
-      .max(SITE_DESCRIPTION_MAX_LENGTH, `站点简介最多 ${SITE_DESCRIPTION_MAX_LENGTH} 个字符`)
       .optional(),
     registrationOpen: z.boolean().optional(),
     storageDriver: z.enum(['local', 's3']).optional(),
