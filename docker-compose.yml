@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qq-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-qingqian}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD 必须设置}
+      POSTGRES_DB: ${POSTGRES_DB:-qingqian_wiki}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    image: ${APP_IMAGE:-qingqian-wiki:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qq-app
+    restart: unless-stopped
+    mem_limit: ${APP_MEM_LIMIT:-512m}
+    env_file:
+      - ${APP_ENV_FILE:-.env}
+    environment:
+      NODE_ENV: production
+      PORT: 3103
+      UPLOADS_PATH: /app/uploads
+      # 容器内直连 compose 网络中的数据库
+      DATABASE_URL: postgresql://${POSTGRES_USER:-qingqian}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-qingqian_wiki}
+    ports:
+      - '127.0.0.1:${APP_PORT:-3103}:3103'
+    volumes:
+      # 图片持久化：默认用命名卷（容器内 appuser 可直接写入）
+      # 如需宿主机直读文件，改为 ./uploads:/app/uploads 并先执行 chown -R 1001:1001 ./uploads
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:3103/healthz || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  postgres_data:
+  uploads_data:

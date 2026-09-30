@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+  super_admin
+}
+
+enum UserStatus {
+  active
+  banned
+}
+
+enum GalleryStatus {
+  draft
+  published
+}
+
+enum StorageDriver {
+  local
+  s3
+}
+
+model User {
+  uid           String        @id @default(cuid())
+  email         String        @unique
+  passwordHash  String
+  displayName   String        @unique
+  bio           String        @default("")
+  role          UserRole      @default(user)
+  status        UserStatus    @default(active)
+  banReason     String?
+  bannedAt      DateTime?
+  bannedByUid   String?
+  avatarAssetId String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  avatarAsset   MediaAsset?   @relation("UserAvatar", fields: [avatarAssetId], references: [id], onDelete: SetNull)
+  galleries     Gallery[]     @relation("UserGalleries")
+  galleryLikes  GalleryLike[]
+  favorites     Favorite[]
+  mediaAssets   MediaAsset[]  @relation("UserMediaAssets")
+
+  @@index([status, createdAt])
+}
+
+model MediaAsset {
+  id            String        @id @default(cuid())
+  ownerUid      String
+  kind          String        @default("image")
+  driver        StorageDriver @default(local)
+  storageKey    String
+  displayKey    String?
+  thumbKey      String?
+  mimeType      String
+  sizeBytes     Int
+  width         Int
+  height        Int
+  blurhash      String?
+  createdAt     DateTime      @default(now())
+  owner         User          @relation("UserMediaAssets", fields: [ownerUid], references: [uid], onDelete: Cascade)
+  galleryImages GalleryImage[]
+  keycapImages  KeycapImage[]
+  userAvatars   User[]        @relation("UserAvatar")
+
+  @@index([ownerUid, createdAt])
+  @@index([createdAt])
+}
+
+model Gallery {
+  id             String        @id @default(cuid())
+  title          String
+  description    String        @default("")
+  status         GalleryStatus @default(draft)
+  authorUid      String
+  likesCount     Int           @default(0)
+  favoritesCount Int           @default(0)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  author         User          @relation("UserGalleries", fields: [authorUid], references: [uid], onDelete: Cascade)
+  images         GalleryImage[]
+  likes          GalleryLike[]
+  favorites      Favorite[]
+
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model GalleryImage {
+  id        String     @id @default(cuid())
+  galleryId String
+  assetId   String
+  sortOrder Int        @default(0)
+  gallery   Gallery    @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  asset     MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([galleryId, assetId])
+  @@index([galleryId, sortOrder])
+}
+
+model Keycap {
+  id          String        @id @default(cuid())
+  seq         Int           @unique
+  name        String
+  description String        @default("")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  images      KeycapImage[]
+
+  @@index([seq])
+}
+
+model KeycapImage {
+  id        String     @id @default(cuid())
+  keycapId  String
+  assetId   String
+  sortOrder Int        @default(0)
+  keycap    Keycap     @relation(fields: [keycapId], references: [id], onDelete: Cascade)
+  asset     MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([keycapId, assetId])
+  @@index([keycapId, sortOrder])
+}
+
+model GalleryLike {
+  id        String   @id @default(cuid())
+  galleryId String
+  userUid   String
+  createdAt DateTime @default(now())
+  gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@unique([galleryId, userUid])
+  @@index([userUid, createdAt])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  galleryId String
+  userUid   String
+  createdAt DateTime @default(now())
+  gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@unique([galleryId, userUid])
+  @@index([userUid, createdAt])
+}
+
+model SiteConfig {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

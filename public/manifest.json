@@ -1,0 +1,16 @@
+{
+  "name": "清浅 Wiki",
+  "short_name": "清浅 Wiki",
+  "description": "清浅 Wiki：清浅老师的美图与键帽开团档案。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f6f4",
+  "theme_color": "#40636b",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
