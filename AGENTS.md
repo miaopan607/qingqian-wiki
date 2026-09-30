@@ -36,6 +36,7 @@
 - 命名：组件文件与导出 PascalCase，工具函数 camelCase，路由文件 `*.routes.ts`，Prisma 模型 PascalCase。
 - 注释用中文，说明代码做什么，避免逐行翻译。
 - 复用优先：先查 `src/components/ui`、`src/lib`、`src/server/services` 是否已有实现。
+- Git 提交说明使用中文，并遵循约定式提交格式（如 `fix: 修复问题`）。
 
 ## 测试与验证
 
