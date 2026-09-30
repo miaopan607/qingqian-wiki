@@ -154,8 +154,14 @@ start_stack() {
     APP_IMAGE="$IMAGE" compose build app
   fi
 
+  # 非本地构建时禁止隐式构建：镜像缺失要报错，而不是去找不存在的构建上下文
+  local up_args=(-d --remove-orphans)
+  if [[ "$BUILD" != "1" ]]; then
+    up_args+=(--no-build)
+  fi
+
   log "启动容器"
-  APP_IMAGE="$IMAGE" compose up -d --remove-orphans
+  APP_IMAGE="$IMAGE" compose up "${up_args[@]}"
 }
 
 wait_for_health() {

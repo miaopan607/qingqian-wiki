@@ -85,7 +85,7 @@ docker compose up -d --build
 curl http://127.0.0.1:3103/healthz
 ```
 
-GHCR 上的镜像包默认是私有可见性。服务器拉取报 `unauthorized/denied` 时二选一：在仓库的 Packages 页面把该包改为 Public；或先登录 `echo "<带 read:packages 的 PAT>" | docker login ghcr.io -u <GitHub 用户名> --password-stdin`。
+本仓库为公开仓库，镜像包随之公开：服务器**无需登录**即可 `docker pull`（实测匿名拉取成功）。如果你手动把包改成了私有，则需先登录：`echo "<带 read:packages 的 PAT>" | docker login ghcr.io -u <GitHub 用户名> --password-stdin`。
 
 ### 运维
 
