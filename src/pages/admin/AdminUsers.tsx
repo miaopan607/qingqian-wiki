@@ -151,7 +151,7 @@ export default function AdminUsers() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="用户管理" subtitle="封禁、角色调整与密码重置（仅超级管理员）" />
+      <PageHeader title="用户管理" />
 
       <Panel className="flex flex-wrap items-end gap-3 p-4">
         <form

@@ -35,7 +35,7 @@ export default function Keycaps() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-8">
-      <PageHeader title="键帽" subtitle="按开团序号排列的键帽档案，点开可看多图与描述。" />
+      <PageHeader title="键帽" />
 
       {list.loading ? (
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

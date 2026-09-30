@@ -89,7 +89,6 @@ export default function AdminKeycaps() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title="键帽管理"
-        subtitle="按开团序号维护键帽档案"
         actions={
           <Button
             leftIcon={<Plus className="size-4" />}

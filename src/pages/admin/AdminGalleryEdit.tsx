@@ -167,10 +167,7 @@ export default function AdminGalleryEdit() {
         返回美图管理
       </Link>
 
-      <PageHeader
-        title={isEdit ? '编辑图集' : '新建图集'}
-        subtitle="图片顺序决定前台展示顺序，第一张作为封面。"
-      />
+      <PageHeader title={isEdit ? '编辑图集' : '新建图集'} />
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <Panel className="flex flex-col gap-4">

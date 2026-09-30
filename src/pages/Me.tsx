@@ -178,7 +178,7 @@ export default function Me() {
   return (
     <RouteGuard requireAuth>
       <div className="mx-auto w-full max-w-5xl px-4 pb-10 pt-8">
-        <PageHeader title="个人中心" subtitle="维护公开资料，查看收藏的美图。" />
+        <PageHeader title="个人中心" />
         <Tabs defaultValue="profile" className="mt-6">
           <TabsList>
             <TabsTrigger value="profile">资料</TabsTrigger>

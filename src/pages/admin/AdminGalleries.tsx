@@ -97,7 +97,6 @@ export default function AdminGalleries() {
     <div className="flex flex-col gap-5">
       <PageHeader
         title="美图管理"
-        subtitle="创建、编辑与上下架图集"
         actions={
           <Button
             leftIcon={<Plus className="size-4" />}

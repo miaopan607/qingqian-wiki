@@ -102,7 +102,7 @@ export default function AdminSettings() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader title="站点设置" subtitle="站点信息、注册开关与图片存储（仅超级管理员）" />
+      <PageHeader title="站点设置" />
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <Panel className="flex flex-col gap-4">

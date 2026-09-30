@@ -175,10 +175,7 @@ export default function AdminKeycapEdit() {
         返回键帽管理
       </Link>
 
-      <PageHeader
-        title={isEdit ? '编辑键帽' : '新建键帽'}
-        subtitle="序号用于排序与对外展示，同一序号不可重复。"
-      />
+      <PageHeader title={isEdit ? '编辑键帽' : '新建键帽'} />
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <Panel className="flex flex-col gap-4">

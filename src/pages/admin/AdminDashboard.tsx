@@ -53,7 +53,6 @@ export default function AdminDashboard() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="仪表盘"
-        subtitle="内容与用户的整体情况"
         actions={
           <>
             <LinkButton to="/admin/galleries/new" size="sm">

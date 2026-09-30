@@ -112,17 +112,15 @@ export function ErrorState({
 
 type PageHeaderProps = {
   title: string
-  subtitle?: string
   actions?: ReactNode
   className?: string
 }
 
-export function PageHeader({ title, subtitle, actions, className }: PageHeaderProps) {
+export function PageHeader({ title, actions, className }: PageHeaderProps) {
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="min-w-0">
         <h1 className="text-2xl text-ink md:text-[1.75rem]">{title}</h1>
-        {subtitle && <p className="mt-2 text-sm text-ink-muted">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </header>

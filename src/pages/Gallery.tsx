@@ -35,7 +35,7 @@ export default function Gallery() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-10 pt-8">
-      <PageHeader title="美图" subtitle="按时间倒序整理的图集，点击查看大图。" />
+      <PageHeader title="美图" />
 
       {list.loading ? (
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
