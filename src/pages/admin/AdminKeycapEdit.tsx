@@ -53,8 +53,9 @@ export default function AdminKeycapEdit() {
           setSeq(String(data.keycap.seq))
           setName(data.keycap.name)
           setDescription(data.keycap.description)
-          setAssets(data.keycap.images.map((image) => ({ ...image })))
-          setInitialAssetIds(data.keycap.images.map((image) => image.id))
+          // 上传组件以资产 ID 管理图片，不能使用内容图片的关联 ID
+          setAssets(data.keycap.images.map((image) => ({ ...image, id: image.assetId })))
+          setInitialAssetIds(data.keycap.images.map((image) => image.assetId))
         } else {
           const data = await apiGet<KeycapListResponse>('/api/admin/keycaps', {
             page: 1,

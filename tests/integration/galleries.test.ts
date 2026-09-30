@@ -173,6 +173,25 @@ describe('图集编辑与删除', () => {
     expect(updated.body.gallery.title).toBe('清浅写真（精选）')
     expect(updated.body.gallery.images).toHaveLength(2)
     expect(updated.body.gallery.images[0].thumbUrl).toBe(secondUpload.body.asset.thumbUrl)
+
+    // 重新加载后用响应中的资产 ID 排序，覆盖已有图片编辑路径
+    const detail = await agent.get(`/api/admin/galleries/${galleryId}`)
+    const reordered = await agent
+      .patch(`/api/admin/galleries/${galleryId}`)
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({
+        assetIds: detail.body.gallery.images
+          .map((image: { assetId: string }) => image.assetId)
+          .reverse(),
+      })
+    expect(reordered.status).toBe(200)
+
+    const saved = await agent.get(`/api/admin/galleries/${galleryId}`)
+    expect(saved.body.gallery.images.map((image: { assetId: string }) => image.assetId)).toEqual([
+      assetId,
+      secondAssetId,
+    ])
+    expect(saved.body.gallery.images[0].thumbUrl).toBe(created.body.gallery.images[0].thumbUrl)
   })
 
   it('删除图集后清理未被引用的图片资产', async () => {

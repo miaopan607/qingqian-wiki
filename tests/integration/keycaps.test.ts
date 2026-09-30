@@ -103,8 +103,9 @@ describe('键帽管理', () => {
 
     const created = await createKeycap(agent, xsrf, {
       name: '山海',
-      assetIds: [first.body.asset.id],
+      assetIds: [first.body.asset.id, second.body.asset.id],
     })
+    const detail = await agent.get(`/api/admin/keycaps/${created.body.keycap.id}`)
 
     const updated = await agent
       .patch(`/api/admin/keycaps/${created.body.keycap.id}`)
@@ -112,13 +113,20 @@ describe('键帽管理', () => {
       .send({
         name: '山海·复刻',
         description: '复刻团',
-        assetIds: [second.body.asset.id, first.body.asset.id],
+        assetIds: detail.body.keycap.images
+          .map((image: { assetId: string }) => image.assetId)
+          .reverse(),
       })
 
     expect(updated.status).toBe(200)
     expect(updated.body.keycap.name).toBe('山海·复刻')
-    expect(updated.body.keycap.images).toHaveLength(2)
-    expect(updated.body.keycap.images[0].thumbUrl).toBe(second.body.asset.thumbUrl)
+
+    const saved = await agent.get(`/api/admin/keycaps/${created.body.keycap.id}`)
+    expect(saved.body.keycap.images.map((image: { assetId: string }) => image.assetId)).toEqual([
+      second.body.asset.id,
+      first.body.asset.id,
+    ])
+    expect(saved.body.keycap.images[0].thumbUrl).toBe(second.body.asset.thumbUrl)
   })
 
   it('删除键帽后清理未被引用的图片资产', async () => {

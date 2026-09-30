@@ -8,7 +8,7 @@ export type AssetRef = {
   blurhash: string | null
 }
 
-export type GalleryImageItem = AssetRef & { sortOrder: number }
+export type GalleryImageItem = AssetRef & { assetId: string; sortOrder: number }
 
 export type GalleryStatus = 'draft' | 'published'
 

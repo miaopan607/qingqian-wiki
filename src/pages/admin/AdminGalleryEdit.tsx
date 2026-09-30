@@ -69,8 +69,9 @@ export default function AdminGalleryEdit() {
           setTitle(data.gallery.title)
           setDescription(data.gallery.description)
           setStatus(data.gallery.status)
-          setAssets(data.gallery.images.map((image) => ({ ...image })))
-          setInitialAssetIds(data.gallery.images.map((image) => image.id))
+          // 上传组件以资产 ID 管理图片，不能使用内容图片的关联 ID
+          setAssets(data.gallery.images.map((image) => ({ ...image, id: image.assetId })))
+          setInitialAssetIds(data.gallery.images.map((image) => image.assetId))
         } else {
           const data = await apiGet<GalleryListResponse>('/api/admin/galleries', {
             page: 1,

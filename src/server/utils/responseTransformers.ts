@@ -18,7 +18,11 @@ type AssetFields = AssetUrlSource & {
 
 export type GalleryInteraction = { liked: boolean; favorited: boolean }
 
-export type ImagePayload = { id: string; sortOrder: number; asset: AssetFields }
+export type ImagePayload = {
+  id: string
+  sortOrder: number
+  asset: AssetFields & { id: string }
+}
 
 export type GalleryListPayload = {
   id: string
@@ -107,6 +111,7 @@ export const KEYCAP_DETAIL_INCLUDE = {
 function toImagePayload(image: ImagePayload) {
   return {
     id: image.id,
+    assetId: image.asset.id,
     sortOrder: image.sortOrder,
     ...resolveAssetUrls(image.asset),
     width: image.asset.width,

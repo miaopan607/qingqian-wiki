@@ -95,6 +95,7 @@ async function flushFrame() {
 
 const images: GalleryImageItem[] = Array.from({ length: 4 }, (_, index) => ({
   id: `image-${index + 1}`,
+  assetId: `asset-${index + 1}`,
   url: `/images/${index + 1}.webp`,
   displayUrl: `/images/${index + 1}-display.webp`,
   thumbUrl: `/images/${index + 1}-thumb.webp`,
