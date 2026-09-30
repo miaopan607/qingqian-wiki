@@ -76,14 +76,27 @@ PULL=0 bash deploy-docker.sh            # 用服务器上已有的镜像
 IMAGE=ghcr.io/miaopan607/qingqian-wiki:sha-abc1234 bash deploy-docker.sh   # 固定版本
 ```
 
-### 从源码部署
+### 国内服务器 / 不拉镜像（本地构建）
+
+国内访问 GitHub 与 Docker Hub 较慢时，改为在服务器上本地构建镜像，全程不拉取任何镜像：
 
 ```bash
-git clone https://github.com/miaopan607/qingqian-wiki.git && cd qingqian-wiki
-cp .env.example .env          # 填 JWT_SECRET（≥32 字符）与 POSTGRES_PASSWORD
-docker compose up -d --build
-curl http://127.0.0.1:3103/healthz
+git clone https://github.com/miaopan607/qingqian-wiki.git
+cd qingqian-wiki
+NPM_REGISTRY=https://registry.npmmirror.com BUILD=1 bash scripts/deploy-docker.sh
 ```
+
+`BUILD=1` 会跳过 `compose pull`，用当前源码在本地构建；`NPM_REGISTRY` 决定构建期 `npm ci` 使用的源（默认官方源）。构建所需的基础镜像 `node:22-bookworm-slim` 与 `postgres:16-alpine` 仍来自 Docker Hub，可在 `/etc/docker/daemon.json` 配置国内镜像加速：
+
+```json
+{
+  "registry-mirrors": ["https://<你的加速地址>"]
+}
+```
+
+改完执行 `systemctl restart docker`（加速地址请自行选取当前可用的服务）。若连 `git clone` 也慢，可在本地克隆后把源码目录 `scp` 上传到服务器（构建只用工作目录里的源码与 `Dockerfile`）。
+
+不改脚本、手动构建也可以：`cp .env.example .env`（填 `JWT_SECRET`（≥32 字符）与 `POSTGRES_PASSWORD`）→ `docker compose up -d --build` → `curl http://127.0.0.1:3103/healthz`。
 
 本仓库为公开仓库，镜像包随之公开：服务器**无需登录**即可 `docker pull`（实测匿名拉取成功）。如果你手动把包改成了私有，则需先登录：`echo "<带 read:packages 的 PAT>" | docker login ghcr.io -u <GitHub 用户名> --password-stdin`。
 

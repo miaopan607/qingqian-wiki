@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# 一键部署：拉取 GitHub Actions 构建的镜像并启动站点。
+# 一键部署：拉取 GitHub Actions 构建的镜像并启动站点（也支持本地构建）。
 #
-# 用法（在服务器上，任意目录均可）：
-#   ./scripts/deploy-docker.sh              # 拉取 GHCR 最新镜像并启动
+# 用法：
+#   ./scripts/deploy-docker.sh              # 拉取 GHCR 最新镜像并启动（服务器任意目录）
 #   APP_PORT=8080 ./scripts/deploy-docker.sh
-#   BUILD=1 ./scripts/deploy-docker.sh      # 本地构建镜像（不拉取）
+#   BUILD=1 ./scripts/deploy-docker.sh      # 本地构建镜像（需在仓库目录，不拉取任何镜像）
 #   PULL=0 ./scripts/deploy-docker.sh       # 不拉取，用本地已有镜像
 #
 # 可用环境变量：
@@ -14,6 +14,8 @@
 #   WORK_DIR       工作目录（默认当前目录）
 #   APP_PORT       对外端口，会写入 .env（默认沿用 .env 或 3103）
 #   PULL / BUILD   见上方用法
+#   NPM_REGISTRY   本地构建使用的 npm 源（默认官方源；国内建议 https://registry.npmmirror.com）
+#   RAW_BASE       下载 docker-compose.yml 的地址前缀（国内可指向镜像加速地址）
 #   HEALTH_RETRIES 健康检查重试次数（默认 60，间隔 2s）
 #   PRUNE_IMAGES   设为 1 时清理悬挂镜像（不动数据卷）
 set -Eeuo pipefail
@@ -42,7 +44,7 @@ warn() { printf "${YELLOW}[deploy]${NC} %s\n" "$*"; }
 error() { printf "${RED}[deploy]${NC} %s\n" "$*" >&2; }
 
 usage() {
-  sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_cmd() {
@@ -134,6 +136,11 @@ ensure_env_file() {
 }
 
 pull_image() {
+  if [[ "$BUILD" == "1" ]]; then
+    log "本地构建模式：跳过镜像拉取"
+    return
+  fi
+
   if [[ "$PULL" != "1" ]]; then
     log "跳过镜像拉取（PULL=$PULL）"
     return
@@ -203,6 +210,14 @@ main() {
   fi
 
   ensure_compose_file
+
+  if [[ "$BUILD" == "1" && ! -f "$WORK_DIR/Dockerfile" ]]; then
+    error "BUILD=1 需要源码目录：未找到 $WORK_DIR/Dockerfile"
+    error "请先 git clone 仓库并在仓库目录执行，例如："
+    error "  git clone https://github.com/${REPO_SLUG}.git && cd qingqian-wiki && BUILD=1 bash scripts/deploy-docker.sh"
+    exit 1
+  fi
+
   ensure_env_file
   pull_image
   start_stack

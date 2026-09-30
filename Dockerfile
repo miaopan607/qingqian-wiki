@@ -3,6 +3,9 @@ FROM node:22-bookworm-slim AS base
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 WORKDIR /app
 
+# 国内服务器可用 --build-arg NPM_REGISTRY=https://registry.npmmirror.com 加速依赖安装
+ARG NPM_REGISTRY=https://registry.npmjs.org
+
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl openssl \
   && rm -rf /var/lib/apt/lists/*
@@ -10,13 +13,13 @@ RUN apt-get update \
 FROM base AS deps
 
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN npm ci --registry="${NPM_REGISTRY}" --no-audit --no-fund
 
 FROM base AS prod-deps
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev --no-audit --no-fund && npx prisma generate
+RUN npm ci --registry="${NPM_REGISTRY}" --omit=dev --no-audit --no-fund && npx prisma generate
 
 FROM base AS builder
 
