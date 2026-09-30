@@ -5,8 +5,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Lightbox } from '../../src/components/Lightbox'
 
 const images = [
-  { id: 'a', url: '/uploads/a.png', displayUrl: '/uploads/a_d.webp', width: 8000, height: 6000 },
-  { id: 'b', url: '/uploads/b.png', displayUrl: '/uploads/b_d.webp', width: 800, height: 1200 },
+  {
+    id: 'a',
+    url: '/uploads/a.png',
+    displayUrl: '/uploads/a_d.webp',
+    thumbUrl: '/uploads/a_t.webp',
+    width: 8000,
+    height: 6000,
+  },
+  {
+    id: 'b',
+    url: '/uploads/b.png',
+    displayUrl: '/uploads/b_d.webp',
+    thumbUrl: '/uploads/b_t.webp',
+    width: 800,
+    height: 1200,
+  },
 ]
 
 function renderLightbox(onClose: () => void = () => {}) {

@@ -65,6 +65,7 @@ export default function GalleryDetail() {
     id: image.id,
     url: image.url,
     displayUrl: image.displayUrl,
+    thumbUrl: image.thumbUrl,
     width: image.width,
     height: image.height,
     blurhash: image.blurhash,

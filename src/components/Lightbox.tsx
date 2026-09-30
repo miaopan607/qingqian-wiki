@@ -17,6 +17,7 @@ export type LightboxImage = {
   id: string
   url: string
   displayUrl?: string
+  thumbUrl: string
   width: number
   height: number
   blurhash?: string | null
@@ -514,7 +515,7 @@ export function Lightbox({ images, index, onClose }: LightboxProps) {
                   : 'border-viewer-ink/25 hover:border-viewer-ink/60'
               )}
             >
-              <img src={image.displayUrl ?? image.url} alt="" className="size-full object-cover" />
+              <img src={image.thumbUrl} alt="" className="size-full object-cover" />
             </button>
           ))}
         </div>
