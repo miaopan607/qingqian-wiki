@@ -152,13 +152,7 @@ function FavoritesList() {
   }
 
   if (items.length === 0) {
-    return (
-      <EmptyState
-        icon={Bookmark}
-        title="还没有收藏"
-        description="在美图详情页点收藏，就会出现在这里。"
-      />
-    )
+    return <EmptyState icon={Bookmark} title="还没有收藏" />
   }
 
   return (

@@ -46,7 +46,7 @@ export default function Keycaps() {
       ) : list.error ? (
         <ErrorState message={getErrorMessage(list.error, '键帽加载失败')} onRetry={list.reload} />
       ) : items.length === 0 ? (
-        <EmptyState icon={Keyboard} title="暂无键帽记录" description="开团档案整理中。" />
+        <EmptyState icon={Keyboard} title="暂无键帽记录" />
       ) : (
         <>
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

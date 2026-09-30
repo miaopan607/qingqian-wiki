@@ -62,11 +62,7 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon={ImageIcon}
-            title="还没有美图"
-            description="等管理员上传后就会出现在这里。"
-          />
+          <EmptyState icon={ImageIcon} title="还没有美图" />
         )}
       </section>
 
@@ -90,7 +86,7 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <EmptyState icon={Keyboard} title="还没有键帽记录" description="键帽开团档案整理中。" />
+          <EmptyState icon={Keyboard} title="还没有键帽记录" />
         )}
       </section>
     </div>

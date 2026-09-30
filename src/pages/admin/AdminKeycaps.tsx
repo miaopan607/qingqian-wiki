@@ -135,7 +135,6 @@ export default function AdminKeycaps() {
           <EmptyState
             icon={Keyboard}
             title="没有匹配的键帽"
-            description="换个关键词，或新建一条键帽记录。"
             action={<Button onClick={() => navigate('/admin/keycaps/new')}>新建键帽</Button>}
           />
         ) : (

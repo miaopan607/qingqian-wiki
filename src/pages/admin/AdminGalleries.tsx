@@ -155,7 +155,6 @@ export default function AdminGalleries() {
           <EmptyState
             icon={ImageIcon}
             title="没有匹配的图集"
-            description="换个关键词，或新建一个图集。"
             action={<Button onClick={() => navigate('/admin/galleries/new')}>新建图集</Button>}
           />
         ) : (

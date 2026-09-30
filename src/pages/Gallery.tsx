@@ -46,11 +46,7 @@ export default function Gallery() {
       ) : list.error ? (
         <ErrorState message={getErrorMessage(list.error, '美图加载失败')} onRetry={list.reload} />
       ) : items.length === 0 ? (
-        <EmptyState
-          icon={ImageIcon}
-          title="暂无图集"
-          description="等管理员上传后就会出现在这里。"
-        />
+        <EmptyState icon={ImageIcon} title="暂无图集" />
       ) : (
         <>
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
