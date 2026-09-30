@@ -90,10 +90,19 @@ read_env_value() {
 }
 
 compose() {
+  # 显式 -f 时 Compose 不会自动合并 override 文件，这里手动带上
+  local args=(-f "$COMPOSE_FILE")
+  local override
+  for override in "$WORK_DIR/docker-compose.override.yml" "$WORK_DIR/docker-compose.override.yaml"; do
+    if [[ -f "$override" ]]; then
+      args+=(-f "$override")
+    fi
+  done
+
   if [[ -f "$ENV_FILE" ]]; then
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+    docker compose --env-file "$ENV_FILE" "${args[@]}" "$@"
   else
-    docker compose -f "$COMPOSE_FILE" "$@"
+    docker compose "${args[@]}" "$@"
   fi
 }
 
