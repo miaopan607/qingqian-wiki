@@ -47,7 +47,7 @@ describe('键帽管理', () => {
     expect(response.body.keycap.seq).toBe(4)
   })
 
-  it('列表按序号升序，并返回下一个可用序号', async () => {
+  it('前后台列表及仪表盘按序号降序，并返回下一个可用序号', async () => {
     const { agent, xsrf } = await loginAsAdmin()
     const asset = await uploadTestAsset(agent, xsrf)
     const assetId = asset.body.asset.id as string
@@ -56,10 +56,14 @@ describe('键帽管理', () => {
     await createKeycap(agent, xsrf, { name: '山海', assetIds: [assetId], seq: 1 })
 
     const list = await createAnonymousAgent().get('/api/keycaps')
-    expect(list.body.items.map((item: { seq: number }) => item.seq)).toEqual([1, 2])
+    expect(list.body.items.map((item: { seq: number }) => item.seq)).toEqual([2, 1])
 
     const adminList = await agent.get('/api/admin/keycaps?page=1&pageSize=20')
+    expect(adminList.body.items.map((item: { seq: number }) => item.seq)).toEqual([2, 1])
     expect(adminList.body.nextSeq).toBe(3)
+
+    const stats = await agent.get('/api/admin/stats')
+    expect(stats.body.latestKeycaps.map((item: { seq: number }) => item.seq)).toEqual([2, 1])
   })
 
   it('序号冲突返回 409', async () => {

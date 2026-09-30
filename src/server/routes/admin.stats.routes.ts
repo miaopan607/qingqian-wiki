@@ -46,7 +46,7 @@ router.get(
         include: GALLERY_LIST_INCLUDE,
       }),
       prisma.keycap.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { seq: 'desc' },
         take: 5,
         include: KEYCAP_LIST_INCLUDE,
       }),

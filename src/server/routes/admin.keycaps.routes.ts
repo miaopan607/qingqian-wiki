@@ -54,7 +54,7 @@ router.get(
     const [keycaps, total, nextSeq] = await Promise.all([
       prisma.keycap.findMany({
         where,
-        orderBy: { seq: 'asc' },
+        orderBy: { seq: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: KEYCAP_LIST_INCLUDE,
