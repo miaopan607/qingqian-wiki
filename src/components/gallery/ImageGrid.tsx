@@ -1,5 +1,5 @@
 import { SmartImage } from '../SmartImage'
-import { cn } from '../ui'
+import { Masonry, cn } from '../ui'
 import type { GalleryImageItem } from '../../types/entities'
 
 type ImageGridProps = {
@@ -12,13 +12,18 @@ export function ImageGrid({ images, onOpen, className }: ImageGridProps) {
   if (images.length === 0) return null
 
   return (
-    <div className={cn('grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4', className)}>
+    <Masonry
+      className={cn(
+        '[--masonry-columns:2] md:[--masonry-columns:3] lg:[--masonry-columns:4] [--masonry-gap:0.75rem]',
+        className
+      )}
+    >
       {images.map((image, index) => (
         <button
           key={image.id}
           type="button"
           onClick={() => onOpen(index)}
-          className="group overflow-hidden rounded-xl border border-border bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
+          className="block w-full overflow-hidden rounded-xl border border-border bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
           aria-label={`查看第 ${index + 1} 张图片`}
         >
           <SmartImage
@@ -27,11 +32,10 @@ export function ImageGrid({ images, onOpen, className }: ImageGridProps) {
             width={image.width}
             height={image.height}
             alt={`图片 ${index + 1}`}
-            wrapperClassName="aspect-square w-full"
-            className="transition-transform duration-500 group-hover:scale-[1.04]"
+            wrapperClassName="w-full"
           />
         </button>
       ))}
-    </div>
+    </Masonry>
   )
 }

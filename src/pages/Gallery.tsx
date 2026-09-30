@@ -2,7 +2,7 @@ import { ImageIcon } from 'lucide-react'
 
 import { GalleryCard } from '../components/gallery/GalleryCard'
 import { Pagination } from '../components/Pagination'
-import { EmptyState, ErrorState, PageHeader, Skeleton } from '../components/ui'
+import { EmptyState, ErrorState, Masonry, PageHeader, Skeleton } from '../components/ui'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { usePagination } from '../hooks/usePagination'
 import { apiGet } from '../lib/apiClient'
@@ -11,6 +11,7 @@ import type { GalleryListResponse } from '../types/api'
 
 const DEFAULT_PAGE_SIZE = 24
 const PAGE_SIZE_OPTIONS = [12, 24, 48]
+const SKELETON_HEIGHTS = ['h-[240px]', 'h-[320px]', 'h-[280px]', 'h-[360px]']
 
 export default function Gallery() {
   const pagination = usePagination({
@@ -38,22 +39,22 @@ export default function Gallery() {
       <PageHeader title="美图" />
 
       {list.loading ? (
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <Masonry className="mt-8 [--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] xl:[--masonry-columns:4] gap-4">
           {Array.from({ length: 8 }, (_, index) => (
-            <Skeleton key={index} className="h-64" />
+            <Skeleton key={index} className={SKELETON_HEIGHTS[index % SKELETON_HEIGHTS.length]} />
           ))}
-        </div>
+        </Masonry>
       ) : list.error ? (
         <ErrorState message={getErrorMessage(list.error, '美图加载失败')} onRetry={list.reload} />
       ) : items.length === 0 ? (
         <EmptyState icon={ImageIcon} title="暂无图集" />
       ) : (
         <>
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <Masonry className="mt-8 [--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] xl:[--masonry-columns:4] gap-4">
             {items.map((gallery, index) => (
               <GalleryCard key={gallery.id} gallery={gallery} priority={index < 4} />
             ))}
-          </div>
+          </Masonry>
           <Pagination
             page={pagination.page}
             totalPages={totalPages}

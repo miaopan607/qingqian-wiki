@@ -12,6 +12,7 @@ import {
   Field,
   Input,
   PageHeader,
+  Masonry,
   Panel,
   Skeleton,
   Tabs,
@@ -34,6 +35,7 @@ import type { GalleryListResponse } from '../types/api'
 const BIO_MAX_LENGTH = 200
 const FAVORITE_PAGE_SIZE = 12
 const FAVORITE_PAGE_SIZE_OPTIONS = [12, 24, 48]
+const SKELETON_HEIGHTS = ['h-[240px]', 'h-[320px]', 'h-[280px]', 'h-[360px]']
 
 function ProfileForm() {
   const { user, refreshAuth } = useAuth()
@@ -138,11 +140,11 @@ function FavoritesList() {
 
   if (list.loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Masonry className="[--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] gap-4">
         {Array.from({ length: 3 }, (_, index) => (
-          <Skeleton key={index} className="h-64" />
+          <Skeleton key={index} className={SKELETON_HEIGHTS[index % SKELETON_HEIGHTS.length]} />
         ))}
-      </div>
+      </Masonry>
     )
   }
 
@@ -158,11 +160,11 @@ function FavoritesList() {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <Masonry className="[--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] gap-4">
         {items.map((gallery) => (
           <GalleryCard key={gallery.id} gallery={gallery} />
         ))}
-      </div>
+      </Masonry>
       <Pagination
         page={pagination.page}
         totalPages={totalPages}

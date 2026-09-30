@@ -2,13 +2,14 @@ import { ImageIcon, Keyboard } from 'lucide-react'
 
 import { GalleryCard } from '../components/gallery/GalleryCard'
 import { KeycapCard } from '../components/keycap/KeycapCard'
-import { EmptyState, LinkButton, Skeleton } from '../components/ui'
+import { EmptyState, LinkButton, Masonry, Skeleton } from '../components/ui'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { useSiteConfig } from '../hooks/useSiteConfig'
 import { apiGet } from '../lib/apiClient'
 import type { GalleryListResponse, KeycapListResponse } from '../types/api'
 
 const PREVIEW_SIZE = 6
+const SKELETON_HEIGHTS = ['h-[240px]', 'h-[320px]', 'h-[280px]', 'h-[360px]']
 
 export default function Home() {
   const { config } = useSiteConfig()
@@ -47,17 +48,17 @@ export default function Home() {
           </LinkButton>
         </div>
         {galleries.loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Masonry className="[--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] gap-4">
             {Array.from({ length: 3 }, (_, index) => (
-              <Skeleton key={index} className="h-64" />
+              <Skeleton key={index} className={SKELETON_HEIGHTS[index % SKELETON_HEIGHTS.length]} />
             ))}
-          </div>
+          </Masonry>
         ) : galleries.data && galleries.data.items.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Masonry className="[--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] gap-4">
             {galleries.data.items.map((gallery, index) => (
               <GalleryCard key={gallery.id} gallery={gallery} priority={index < 3} />
             ))}
-          </div>
+          </Masonry>
         ) : (
           <EmptyState icon={ImageIcon} title="还没有美图" />
         )}
@@ -71,17 +72,17 @@ export default function Home() {
           </LinkButton>
         </div>
         {keycaps.loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Masonry className="[--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] gap-4">
             {Array.from({ length: 3 }, (_, index) => (
-              <Skeleton key={index} className="h-64" />
+              <Skeleton key={index} className={SKELETON_HEIGHTS[index % SKELETON_HEIGHTS.length]} />
             ))}
-          </div>
+          </Masonry>
         ) : keycaps.data && keycaps.data.items.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Masonry className="[--masonry-columns:1] sm:[--masonry-columns:2] lg:[--masonry-columns:3] gap-4">
             {keycaps.data.items.map((keycap, index) => (
               <KeycapCard key={keycap.id} keycap={keycap} priority={index < 3} />
             ))}
-          </div>
+          </Masonry>
         ) : (
           <EmptyState icon={Keyboard} title="还没有键帽记录" />
         )}

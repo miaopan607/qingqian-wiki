@@ -28,3 +28,4 @@ export {
 } from './overlays'
 export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './data'
 export { cn } from './utils'
+export { Masonry, computeMasonryLayout, type MasonryProps } from './Masonry'

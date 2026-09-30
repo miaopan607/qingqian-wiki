@@ -1,5 +1,5 @@
 import { decode } from 'blurhash'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { cn } from './ui/utils'
 
@@ -58,9 +58,15 @@ export function SmartImage({
     setPlaceholder(blurhash ? decodeBlurhash(blurhash) : null)
   }, [blurhash, src])
 
-  const aspectRatio = width && height ? `${width} / ${height}` : undefined
-  const containerRef = useRef<HTMLDivElement>(null)
-
+  const aspectRatio =
+    width !== undefined &&
+    Number.isFinite(width) &&
+    width > 0 &&
+    height !== undefined &&
+    Number.isFinite(height) &&
+    height > 0
+      ? `${width} / ${height}`
+      : '4 / 3'
   if (!src) {
     return (
       <div
@@ -77,7 +83,6 @@ export function SmartImage({
 
   return (
     <div
-      ref={containerRef}
       className={cn('relative overflow-hidden bg-surface-alt', wrapperClassName)}
       style={{ aspectRatio }}
     >
@@ -97,7 +102,7 @@ export function SmartImage({
         onLoad={() => setLoaded(true)}
         onError={() => setFailed(true)}
         className={cn(
-          'relative size-full object-cover transition-opacity duration-300',
+          'absolute inset-0 size-full object-contain transition-opacity duration-300',
           loaded ? 'opacity-100' : 'opacity-0',
           failed && 'opacity-0',
           className

@@ -14,7 +14,7 @@ type KeycapCardProps = {
 export function KeycapCard({ keycap, priority, className }: KeycapCardProps) {
   return (
     <Panel
-      className={cn('group overflow-hidden p-0 transition-shadow hover:shadow-lg', className)}
+      className={cn('overflow-hidden p-0 transition-shadow hover:shadow-lg', className)}
       padded={false}
     >
       <Link to={`/keycaps/${keycap.id}`} className="block">
@@ -25,8 +25,7 @@ export function KeycapCard({ keycap, priority, className }: KeycapCardProps) {
           height={keycap.cover?.height}
           alt={keycap.name}
           priority={priority}
-          wrapperClassName="aspect-[4/3] w-full"
-          className="transition-transform duration-500 group-hover:scale-[1.03]"
+          wrapperClassName="w-full"
         />
         <div className="flex flex-col gap-2 p-4">
           <div className="flex items-center gap-2">

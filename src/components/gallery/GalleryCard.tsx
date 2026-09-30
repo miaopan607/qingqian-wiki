@@ -15,7 +15,7 @@ type GalleryCardProps = {
 export function GalleryCard({ gallery, priority, className }: GalleryCardProps) {
   return (
     <Panel
-      className={cn('group overflow-hidden p-0 transition-shadow hover:shadow-lg', className)}
+      className={cn('overflow-hidden p-0 transition-shadow hover:shadow-lg', className)}
       padded={false}
     >
       <Link to={`/gallery/${gallery.id}`} className="block">
@@ -26,8 +26,7 @@ export function GalleryCard({ gallery, priority, className }: GalleryCardProps) 
           height={gallery.cover?.height}
           alt={gallery.title}
           priority={priority}
-          wrapperClassName="aspect-[4/3] w-full"
-          className="transition-transform duration-500 group-hover:scale-[1.03]"
+          wrapperClassName="w-full"
         />
         <div className="flex flex-col gap-2 p-4">
           <div className="flex items-start justify-between gap-2">

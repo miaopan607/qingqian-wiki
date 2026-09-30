@@ -74,6 +74,19 @@
 }
 
 @layer components {
+  .qq-masonry {
+    --masonry-columns: 1;
+    --masonry-gap: 1rem;
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--masonry-columns), minmax(0, 1fr));
+    gap: var(--masonry-gap);
+  }
+
+  .qq-masonry-item {
+    min-width: 0;
+    align-self: start;
+  }
   /* 纸感底纹：颜色取自主题 token，深浅色各自成立；
      固定 520px 高度带 + 不重复，避免在长页面上被拉成大色块 */
   .qq-paper-texture {

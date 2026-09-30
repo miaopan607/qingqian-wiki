@@ -4,12 +4,14 @@ import { Link, useParams } from 'react-router-dom'
 
 import { ImageGrid } from '../components/gallery/ImageGrid'
 import { Lightbox, type LightboxImage } from '../components/Lightbox'
-import { Badge, EmptyState, LinkButton, Panel, Skeleton } from '../components/ui'
+import { Badge, EmptyState, LinkButton, Masonry, Panel, Skeleton } from '../components/ui'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { apiRequest } from '../lib/apiClient'
 import { getErrorMessage } from '../lib/errorHandler'
 import { formatDate } from '../lib/format'
 import type { KeycapDetailResponse } from '../types/api'
+
+const IMAGE_SKELETON_HEIGHTS = ['h-[180px]', 'h-[260px]', 'h-[220px]', 'h-[300px]']
 
 export default function KeycapDetail() {
   const { keycapId = '' } = useParams()
@@ -24,11 +26,14 @@ export default function KeycapDetail() {
       <div className="mx-auto w-full max-w-6xl px-4 py-8">
         <Skeleton className="h-8 w-56" />
         <Skeleton className="mt-4 h-20 w-full" />
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Masonry className="mt-6 [--masonry-columns:2] md:[--masonry-columns:3] lg:[--masonry-columns:4] [--masonry-gap:0.75rem]">
           {Array.from({ length: 4 }, (_, index) => (
-            <Skeleton key={index} className="aspect-square" />
+            <Skeleton
+              key={index}
+              className={IMAGE_SKELETON_HEIGHTS[index % IMAGE_SKELETON_HEIGHTS.length]}
+            />
           ))}
-        </div>
+        </Masonry>
       </div>
     )
   }
