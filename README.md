@@ -55,22 +55,52 @@ npm run dev
 
 ## 部署
 
-推荐 Docker Compose（应用 + PostgreSQL）：
+镜像由 GitHub Actions 在推送 `main`（或打 `v*` 标签、手动触发）时自动构建并推送到 GHCR：`ghcr.io/miaopan607/qingqian-wiki:latest`。服务器只需拉取运行。
+
+### 一键部署（推荐）
 
 ```bash
-cp .env.example .env          # 填写 JWT_SECRET、POSTGRES_PASSWORD 等
+mkdir -p /opt/qingqian-wiki && cd /opt/qingqian-wiki
+curl -fsSL https://raw.githubusercontent.com/miaopan607/qingqian-wiki/main/scripts/deploy-docker.sh -o deploy-docker.sh
+bash deploy-docker.sh
+```
+
+脚本会：生成 `.env`（随机 `JWT_SECRET` 与数据库口令）→ 缺 `docker-compose.yml` 时从仓库下载 → 拉取镜像 → `docker compose up -d` → 等待 `/healthz`。**首次部署后立刻访问 `/setup` 创建超级管理员**，否则任何人访问站点都能抢注。
+
+常用覆盖项：
+
+```bash
+APP_PORT=8080 bash deploy-docker.sh     # 换端口
+BUILD=1 bash deploy-docker.sh           # 在源码目录本地构建，不走镜像
+PULL=0 bash deploy-docker.sh            # 用服务器上已有的镜像
+IMAGE=ghcr.io/miaopan607/qingqian-wiki:sha-abc1234 bash deploy-docker.sh   # 固定版本
+```
+
+### 从源码部署
+
+```bash
+git clone https://github.com/miaopan607/qingqian-wiki.git && cd qingqian-wiki
+cp .env.example .env          # 填 JWT_SECRET（≥32 字符）与 POSTGRES_PASSWORD
 docker compose up -d --build
 curl http://127.0.0.1:3103/healthz
 ```
 
-图片默认保存在 Docker 命名卷 `uploads_data`（容器内 `/app/uploads`），数据库数据在 `postgres_data` 卷中。若希望直接在宿主机读写图片文件，改用宿主目录挂载：
+GHCR 上的镜像包默认是私有可见性。服务器拉取报 `unauthorized/denied` 时二选一：在仓库的 Packages 页面把该包改为 Public；或先登录 `echo "<带 read:packages 的 PAT>" | docker login ghcr.io -u <GitHub 用户名> --password-stdin`。
+
+### 运维
+
+```bash
+docker compose logs -f app                     # 日志
+docker compose pull app && docker compose up -d  # 升级到最新镜像（启动时自动迁移）
+docker compose exec postgres pg_dump -U qingqian qingqian_wiki > backup.sql   # 备份数据库
+```
+
+图片默认保存在命名卷 `uploads_data`（容器内 `/app/uploads`），数据库数据在 `postgres_data` 卷中。若希望直接在宿主机读写图片文件，改用宿主目录挂载：
 
 ```yaml
 volumes:
   - ./uploads:/app/uploads # 需先执行 chown -R 1001:1001 ./uploads
 ```
-
-常用运维命令：`docker compose logs -f app`、`docker compose exec postgres pg_dump -U qingqian qingqian_wiki > backup.sql`。
 
 对外建议用 Nginx 反代并配置 HTTPS：
 

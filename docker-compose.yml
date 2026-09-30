@@ -16,7 +16,9 @@ services:
       retries: 20
 
   app:
-    image: ${APP_IMAGE:-qingqian-wiki:latest}
+    # 默认使用 GitHub Actions 构建并推送到 GHCR 的镜像；
+    # 本地无该镜像时 compose 会按 build 段自行构建（首次本地构建会慢一些）
+    image: ${APP_IMAGE:-ghcr.io/miaopan607/qingqian-wiki:latest}
     build:
       context: .
       dockerfile: Dockerfile
