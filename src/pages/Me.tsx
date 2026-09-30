@@ -2,6 +2,7 @@ import { Bookmark } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { GalleryCard } from '../components/gallery/GalleryCard'
+import { ApiKeysPanel } from '../components/ApiKeysPanel'
 import { AvatarUploader } from '../components/AvatarUploader'
 import { Pagination } from '../components/Pagination'
 import {
@@ -183,12 +184,16 @@ export default function Me() {
           <TabsList>
             <TabsTrigger value="profile">资料</TabsTrigger>
             <TabsTrigger value="favorites">我的收藏</TabsTrigger>
+            <TabsTrigger value="api-keys">API 接入</TabsTrigger>
           </TabsList>
           <TabsContent value="profile">
             <ProfileForm />
           </TabsContent>
           <TabsContent value="favorites">
             <FavoritesList />
+          </TabsContent>
+          <TabsContent value="api-keys">
+            <ApiKeysPanel />
           </TabsContent>
         </Tabs>
       </div>

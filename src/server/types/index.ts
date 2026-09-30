@@ -14,4 +14,7 @@ export type ApiUser = {
 
 export type AuthenticatedRequest = Request & {
   authUser?: ApiUser
+  authMethod?: 'cookie' | 'api_key'
+  apiKey?: { id: string; scope: 'read' | 'read_write' }
+  authSessionVersion?: string
 }

@@ -18,6 +18,11 @@ enum UserStatus {
   banned
 }
 
+enum ApiKeyScope {
+  read
+  read_write
+}
+
 enum GalleryStatus {
   draft
   published
@@ -47,15 +52,33 @@ model User {
   galleryLikes  GalleryLike[]
   favorites     Favorite[]
   mediaAssets   MediaAsset[]  @relation("UserMediaAssets")
+  apiKeys       ApiKey[]
 
   @@index([status, createdAt])
 }
 
+model ApiKey {
+  id             String      @id @default(cuid())
+  userUid        String
+  name           String
+  tokenHash      String      @unique
+  tokenPrefix    String
+  scope          ApiKeyScope
+  sessionVersion String
+  createdAt      DateTime    @default(now())
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  user           User        @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@index([userUid, createdAt])
+  @@index([userUid, sessionVersion, revokedAt, expiresAt])
+}
+
 model MediaAsset {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   ownerUid      String
-  kind          String        @default("image")
-  driver        StorageDriver @default(local)
+  kind          String         @default("image")
+  driver        StorageDriver  @default(local)
   storageKey    String
   displayKey    String?
   thumbKey      String?
@@ -64,28 +87,28 @@ model MediaAsset {
   width         Int
   height        Int
   blurhash      String?
-  createdAt     DateTime      @default(now())
-  owner         User          @relation("UserMediaAssets", fields: [ownerUid], references: [uid], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  owner         User           @relation("UserMediaAssets", fields: [ownerUid], references: [uid], onDelete: Cascade)
   galleryImages GalleryImage[]
   keycapImages  KeycapImage[]
-  userAvatars   User[]        @relation("UserAvatar")
+  userAvatars   User[]         @relation("UserAvatar")
 
   @@index([ownerUid, createdAt])
   @@index([createdAt])
 }
 
 model Gallery {
-  id             String        @id @default(cuid())
+  id             String         @id @default(cuid())
   title          String
-  description    String        @default("")
-  status         GalleryStatus @default(draft)
+  description    String         @default("")
+  status         GalleryStatus  @default(draft)
   authorUid      String
-  likesCount     Int           @default(0)
-  favoritesCount Int           @default(0)
+  likesCount     Int            @default(0)
+  favoritesCount Int            @default(0)
   publishedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  author         User          @relation("UserGalleries", fields: [authorUid], references: [uid], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  author         User           @relation("UserGalleries", fields: [authorUid], references: [uid], onDelete: Cascade)
   images         GalleryImage[]
   likes          GalleryLike[]
   favorites      Favorite[]

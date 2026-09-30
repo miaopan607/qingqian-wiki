@@ -29,3 +29,4 @@ export {
   idParamSchema,
   assetIdParamSchema,
 } from './admin.schema'
+export { createApiKeySchema } from './apiKey.schema'

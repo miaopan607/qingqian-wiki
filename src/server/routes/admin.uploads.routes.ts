@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import { asyncHandler } from '../middleware/asyncHandler'
 import { requireAdmin } from '../middleware/auth'
+import { apiKeyWriteLimiter } from '../middleware/rateLimit'
 import { uploadLimiter } from '../middleware/rateLimit'
 import { imageUpload } from '../middleware/upload'
 import { processGalleryImage } from '../services/image.service'
@@ -44,6 +45,7 @@ router.post(
 router.delete(
   '/:assetId',
   requireAdmin,
+  apiKeyWriteLimiter,
   asyncHandler(async (req, res) => {
     const deleted = await deleteAssetById(readParam(req.params.assetId))
     res.json({ success: deleted })

@@ -30,6 +30,10 @@ export function issueXsrfToken(res: Response): void {
 
 // 双提交校验：Cookie 与请求头必须同时存在且逐字节一致
 export function csrfMiddleware(req: Request, res: Response, next: NextFunction): void {
+  if ((req as AuthenticatedRequest).authMethod === 'api_key') {
+    next()
+    return
+  }
   const existing = req.cookies?.[XSRF_COOKIE_NAME]
   if (!existing || typeof existing !== 'string') {
     issueXsrfToken(res)

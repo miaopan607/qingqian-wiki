@@ -28,6 +28,7 @@ import { registerConfigRoutes } from './src/server/routes/config.routes'
 import { registerGalleriesRoutes } from './src/server/routes/galleries.routes'
 import { registerKeycapsRoutes } from './src/server/routes/keycaps.routes'
 import { registerMeRoutes } from './src/server/routes/me.routes'
+import { registerApiKeyRoutes } from './src/server/routes/apiKeys.routes'
 import { registerSetupRoutes } from './src/server/routes/setup.routes'
 import { logger } from './src/server/utils/logger'
 import { getUploadsDir } from './src/server/utils/uploadsPath'
@@ -118,6 +119,7 @@ app.use('/uploads', (_req, res) => {
 registerSetupRoutes(app)
 registerConfigRoutes(app)
 registerAuthRoutes(app)
+registerApiKeyRoutes(app)
 registerMeRoutes(app)
 registerGalleriesRoutes(app)
 registerKeycapsRoutes(app)

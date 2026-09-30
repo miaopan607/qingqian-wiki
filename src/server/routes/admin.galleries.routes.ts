@@ -2,6 +2,7 @@ import { Router } from 'express'
 
 import { asyncHandler } from '../middleware/asyncHandler'
 import { requireAdmin } from '../middleware/auth'
+import { apiKeyWriteLimiter } from '../middleware/rateLimit'
 import { prisma } from '../prisma'
 import {
   adminGalleryListQuerySchema,
@@ -78,6 +79,7 @@ router.get(
 router.post(
   '/',
   requireAdmin,
+  apiKeyWriteLimiter,
   validateBody(galleryCreateSchema),
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const { title, description, status, assetIds } = req.body as {
@@ -114,6 +116,7 @@ router.post(
 router.patch(
   '/:id',
   requireAdmin,
+  apiKeyWriteLimiter,
   validateBody(galleryUpdateSchema),
   asyncHandler(async (req, res) => {
     const id = readParam(req.params.id)

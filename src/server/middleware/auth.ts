@@ -7,6 +7,7 @@ import { prisma } from '../prisma'
 import { resolveAssetUrls } from '../services/media.service'
 import type { ApiUser, AuthenticatedRequest } from '../types'
 import { issueXsrfToken } from './csrf'
+import { authenticateApiKeyRequest } from './apiKey'
 
 export const AUTH_COOKIE_NAME = 'qq_token'
 export const AUTH_SESSION_DAYS = 90
@@ -112,6 +113,8 @@ export async function findSessionUser(req: Request): Promise<SessionUserRecord |
   const user = await prisma.user.findUnique({ where: { uid: payload.uid }, select: USER_SELECT })
   if (!user) return null
   if (payload.sessionVersion !== createSessionVersion(user.passwordHash)) return null
+  const authReq = req as AuthenticatedRequest
+  authReq.authSessionVersion = payload.sessionVersion
 
   return user
 }
@@ -121,6 +124,13 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const isApiRequest = req.path === '/api' || req.path.startsWith('/api/')
+
+  if (isApiRequest && req.headers.authorization !== undefined) {
+    await authenticateApiKeyRequest(req, res, next)
+    return
+  }
+
   try {
     const user = await findSessionUser(req)
     if (!user) {
@@ -131,7 +141,9 @@ export async function authMiddleware(
       return
     }
 
-    ;(req as AuthenticatedRequest).authUser = toApiUser(user)
+    const authReq = req as AuthenticatedRequest
+    authReq.authUser = toApiUser(user)
+    authReq.authMethod = 'cookie'
   } catch {
     // 认证失败不应中断请求，按匿名继续
     clearAuthCookie(res)

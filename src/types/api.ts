@@ -41,3 +41,22 @@ export type AdminSettingsResponse = {
   settings: SiteSettings
   capabilities: { s3Configured: boolean; uploadsDir: string; storageDriver: 'local' | 's3' }
 }
+
+export type ApiKeyMetadata = {
+  id: string
+  name: string
+  tokenPrefix: string
+  scope: 'read' | 'read_write'
+  createdAt: string
+  expiresAt: string | null
+  revokedAt: string | null
+  status: 'active' | 'expired' | 'revoked' | 'invalidated'
+}
+
+export type ApiKeyListResponse = { items: ApiKeyMetadata[] }
+export type CreateApiKeyResponse = { apiKey: ApiKeyMetadata; token: string }
+export type CreateApiKeyInput = {
+  name: string
+  scope: 'read' | 'read_write'
+  expiresInDays: 30 | 90 | 365 | null
+}
