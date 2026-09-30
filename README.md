@@ -109,3 +109,7 @@ tests/                   单元测试与集成测试
 ```
 
 数据结构以 `prisma/schema.prisma` 为准。更多约定见 `AGENTS.md`。
+
+## 许可证
+
+本项目基于 [Apache License 2.0](LICENSE) 发布，Copyright 2026 淼畔。
