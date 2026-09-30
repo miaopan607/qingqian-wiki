@@ -76,25 +76,52 @@ PULL=0 bash deploy-docker.sh            # 用服务器上已有的镜像
 IMAGE=ghcr.io/miaopan607/qingqian-wiki:sha-abc1234 bash deploy-docker.sh   # 固定版本
 ```
 
-### 国内服务器 / 不拉镜像（本地构建）
+### 国内服务器 / 不连 Docker Hub 与 GitHub
 
-国内访问 GitHub 与 Docker Hub 较慢时，改为在服务器上本地构建镜像，全程不拉取任何镜像：
+国内直连 Docker Hub 会卡在拉取基础镜像元数据，典型报错：
+
+```text
+failed to resolve source metadata for docker.io/library/node:22-bookworm-slim:
+dial tcp 104.244.46.211:443: i/o timeout
+```
+
+用镜像源地址覆盖基础镜像与各上游源即可绕开（四个变量各解决一处外网依赖）：
 
 ```bash
 git clone https://github.com/miaopan607/qingqian-wiki.git
 cd qingqian-wiki
-NPM_REGISTRY=https://registry.npmmirror.com BUILD=1 bash scripts/deploy-docker.sh
+
+NODE_IMAGE=docker.m.daocloud.io/library/node:22-bookworm-slim \
+POSTGRES_IMAGE=docker.m.daocloud.io/library/postgres:16-alpine \
+NPM_REGISTRY=https://registry.npmmirror.com \
+DEBIAN_MIRROR=mirrors.tuna.tsinghua.edu.cn \
+BUILD=1 bash scripts/deploy-docker.sh
 ```
 
-`BUILD=1` 会跳过 `compose pull`，用当前源码在本地构建；`NPM_REGISTRY` 决定构建期 `npm ci` 使用的源（默认官方源）。构建所需的基础镜像 `node:22-bookworm-slim` 与 `postgres:16-alpine` 仍来自 Docker Hub，可在 `/etc/docker/daemon.json` 配置国内镜像加速：
+| 变量             | 解决的问题                                                            |
+| ---------------- | --------------------------------------------------------------------- |
+| `NODE_IMAGE`     | 构建阶段 Node 基础镜像（默认 `node:22-bookworm-slim`，走 Docker Hub） |
+| `POSTGRES_IMAGE` | 数据库镜像（默认 `postgres:16-alpine`，走 Docker Hub）                |
+| `NPM_REGISTRY`   | 构建期 `npm ci` 依赖源（默认官方 npm 源）                             |
+| `DEBIAN_MIRROR`  | 构建期 `apt-get` 的 Debian 源域名（默认 `deb.debian.org`）            |
 
-```json
-{
-  "registry-mirrors": ["https://<你的加速地址>"]
-}
+镜像源地址会随时间失效，先用下面命令挑一个可用的（任一显示 OK 即可用）：
+
+```bash
+for m in docker.m.daocloud.io docker.1ms.run hub.rat.dev dockerproxy.net; do
+  docker pull -q "$m/library/hello-world:latest" >/dev/null 2>&1 && echo "$m OK" || echo "$m FAIL"
+done
 ```
 
-改完执行 `systemctl restart docker`（加速地址请自行选取当前可用的服务）。若连 `git clone` 也慢，可在本地克隆后把源码目录 `scp` 上传到服务器（构建只用工作目录里的源码与 `Dockerfile`）。
+等效替代：在 `/etc/docker/daemon.json` 配置 `registry-mirrors` 后 `systemctl restart docker`，这样默认镜像名也会走加速。
+
+源码若也拉不动：本地克隆后打包上传（构建只用工作目录里的源码与 `Dockerfile`）：
+
+```bash
+tar --exclude=node_modules --exclude=.git --exclude=dist -czf qingqian-wiki.tgz .
+scp qingqian-wiki.tgz root@<服务器>:/opt/
+# 服务器上：tar -xzf qingqian-wiki.tgz -C /opt/qingqian-wiki && cd /opt/qingqian-wiki
+```
 
 不改脚本、手动构建也可以：`cp .env.example .env`（填 `JWT_SECRET`（≥32 字符）与 `POSTGRES_PASSWORD`）→ `docker compose up -d --build` → `curl http://127.0.0.1:3103/healthz`。
 

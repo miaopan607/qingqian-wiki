@@ -1,12 +1,27 @@
-FROM node:22-bookworm-slim AS base
+# 基础镜像与系统源均可覆盖：国内服务器可指向 Docker Hub 镜像源，绕过 registry-1.docker.io
+# 例：--build-arg NODE_IMAGE=docker.m.daocloud.io/library/node:22-bookworm-slim
+ARG NODE_IMAGE=node:22-bookworm-slim
+# 例：--build-arg DEBIAN_MIRROR=mirrors.tuna.tsinghua.edu.cn
+ARG DEBIAN_MIRROR=
+
+FROM ${NODE_IMAGE} AS base
 
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 WORKDIR /app
 
+# 全局 ARG 在阶段内必须重新声明后才能使用
+ARG DEBIAN_MIRROR=
 # 国内服务器可用 --build-arg NPM_REGISTRY=https://registry.npmmirror.com 加速依赖安装
 ARG NPM_REGISTRY=https://registry.npmjs.org
 
-RUN apt-get update \
+RUN if [ -n "${DEBIAN_MIRROR}" ]; then \
+      for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources; do \
+        if [ -f "$f" ]; then \
+          sed -i -e "s|deb.debian.org|${DEBIAN_MIRROR}|g" -e "s|security.debian.org|${DEBIAN_MIRROR}|g" "$f"; \
+        fi; \
+      done; \
+    fi \
+  && apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl openssl \
   && rm -rf /var/lib/apt/lists/*
 

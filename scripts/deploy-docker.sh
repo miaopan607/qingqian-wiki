@@ -15,6 +15,9 @@
 #   APP_PORT       对外端口，会写入 .env（默认沿用 .env 或 3103）
 #   PULL / BUILD   见上方用法
 #   NPM_REGISTRY   本地构建使用的 npm 源（默认官方源；国内建议 https://registry.npmmirror.com）
+#   NODE_IMAGE     构建用的 Node 基础镜像（默认 node:22-bookworm-slim；可用镜像源地址）
+#   POSTGRES_IMAGE 数据库镜像（默认 postgres:16-alpine；可用镜像源地址）
+#   DEBIAN_MIRROR  构建期 Debian 源域名（默认官方源；如 mirrors.tuna.tsinghua.edu.cn）
 #   RAW_BASE       下载 docker-compose.yml 的地址前缀（国内可指向镜像加速地址）
 #   HEALTH_RETRIES 健康检查重试次数（默认 60，间隔 2s）
 #   PRUNE_IMAGES   设为 1 时清理悬挂镜像（不动数据卷）
@@ -44,7 +47,7 @@ warn() { printf "${YELLOW}[deploy]${NC} %s\n" "$*"; }
 error() { printf "${RED}[deploy]${NC} %s\n" "$*" >&2; }
 
 usage() {
-  sed -n '2,24p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,28p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 require_cmd() {
