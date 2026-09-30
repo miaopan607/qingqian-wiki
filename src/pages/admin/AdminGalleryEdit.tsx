@@ -18,7 +18,7 @@ import { useToast } from '../../components/Toast'
 import { apiDelete, apiGet, apiPatch, apiPost, apiRequest } from '../../lib/apiClient'
 import { AppError, getErrorMessage } from '../../lib/errorHandler'
 import { invalidateCacheByPrefix } from '../../lib/requestDedup'
-import type { GalleryDetailResponse } from '../../types/api'
+import type { GalleryDetailResponse, GalleryListResponse } from '../../types/api'
 import type { AssetRef } from '../../types/entities'
 
 const TITLE_MAX = 60
@@ -44,35 +44,50 @@ export default function AdminGalleryEdit() {
   const navigate = useNavigate()
   const toast = useToast()
 
+  const [seq, setSeq] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState<'draft' | 'published'>('published')
   const [assets, setAssets] = useState<AssetRef[]>([])
   const [initialAssetIds, setInitialAssetIds] = useState<string[]>([])
-  const [loading, setLoading] = useState(isEdit)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
-    if (!galleryId) return
-
     let active = true
-    apiRequest<GalleryDetailResponse>(`/api/admin/galleries/${galleryId}`, { dedup: false })
-      .then((data) => {
-        if (!active) return
-        setTitle(data.gallery.title)
-        setDescription(data.gallery.description)
-        setStatus(data.gallery.status)
-        setAssets(data.gallery.images.map((image) => ({ ...image })))
-        setInitialAssetIds(data.gallery.images.map((image) => image.id))
-      })
-      .catch((error) => {
-        toast.show({ title: '加载失败', description: getErrorMessage(error), tone: 'error' })
-      })
-      .finally(() => {
+    const load = async () => {
+      try {
+        if (galleryId) {
+          const data = await apiRequest<GalleryDetailResponse>(
+            `/api/admin/galleries/${galleryId}`,
+            { dedup: false }
+          )
+          if (!active) return
+          setSeq(String(data.gallery.seq))
+          setTitle(data.gallery.title)
+          setDescription(data.gallery.description)
+          setStatus(data.gallery.status)
+          setAssets(data.gallery.images.map((image) => ({ ...image })))
+          setInitialAssetIds(data.gallery.images.map((image) => image.id))
+        } else {
+          const data = await apiGet<GalleryListResponse>('/api/admin/galleries', {
+            page: 1,
+            pageSize: 1,
+          })
+          if (!active) return
+          setSeq(String(data.nextSeq ?? 1))
+        }
+      } catch (error) {
+        if (active) {
+          toast.show({ title: '加载失败', description: getErrorMessage(error), tone: 'error' })
+        }
+      } finally {
         if (active) setLoading(false)
-      })
+      }
+    }
+    void load()
 
     return () => {
       active = false
@@ -109,6 +124,12 @@ export default function AdminGalleryEdit() {
     event.preventDefault()
     if (saving) return
 
+    const parsedSeq = Number(seq)
+    if (!Number.isInteger(parsedSeq) || parsedSeq < 1 || parsedSeq > 9999) {
+      setFieldErrors({ seq: '序号需为 1-9999 的整数' })
+      return
+    }
+
     if (!title.trim()) {
       setFieldErrors({ title: '标题不能为空' })
       return
@@ -123,6 +144,7 @@ export default function AdminGalleryEdit() {
 
     try {
       const payload = {
+        seq: parsedSeq,
         title: title.trim(),
         description,
         status,
@@ -171,6 +193,20 @@ export default function AdminGalleryEdit() {
 
       <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
         <Panel className="flex flex-col gap-4">
+          <Field label="序号" htmlFor="gallery-seq" required error={fieldErrors.seq}>
+            <Input
+              id="gallery-seq"
+              type="number"
+              min={1}
+              max={9999}
+              value={seq}
+              onChange={(event) => {
+                setSeq(event.target.value)
+                markDirty()
+              }}
+            />
+          </Field>
+
           <Field label="标题" htmlFor="gallery-title" required error={fieldErrors.title}>
             <Input
               id="gallery-title"

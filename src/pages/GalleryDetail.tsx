@@ -82,6 +82,7 @@ export default function GalleryDetail() {
 
       <header className="mt-5 flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-3">
+          <Badge tone="accent">第 {gallery.seq} 组</Badge>
           <h1 className="text-2xl text-ink md:text-3xl">{gallery.title}</h1>
           {gallery.status === 'draft' && <Badge tone="muted">草稿（仅管理员可见）</Badge>}
           <Badge tone="accent">{gallery.images.length} 张</Badge>

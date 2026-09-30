@@ -103,7 +103,7 @@ export default function AdminDashboard() {
                       to={`/admin/galleries/${gallery.id}/edit`}
                       className="line-clamp-1 text-sm text-ink hover:text-accent"
                     >
-                      {gallery.title}
+                      第 {gallery.seq} 组 · {gallery.title}
                     </Link>
                     <p className="text-xs text-ink-muted">
                       {gallery.imagesCount} 张 · {formatRelative(gallery.createdAt)}

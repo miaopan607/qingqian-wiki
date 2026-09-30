@@ -31,7 +31,7 @@ router.get(
     const [galleries, total] = await Promise.all([
       prisma.gallery.findMany({
         where,
-        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+        orderBy: { seq: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: GALLERY_LIST_INCLUDE,

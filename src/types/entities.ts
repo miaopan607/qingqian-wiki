@@ -14,6 +14,7 @@ export type GalleryStatus = 'draft' | 'published'
 
 export type GalleryItem = {
   id: string
+  seq: number
   title: string
   description: string
   status: GalleryStatus
@@ -30,6 +31,7 @@ export type GalleryItem = {
 
 export type GalleryDetail = {
   id: string
+  seq: number
   title: string
   description: string
   status: GalleryStatus

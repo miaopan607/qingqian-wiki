@@ -41,7 +41,7 @@ router.get(
         },
       }),
       prisma.gallery.findMany({
-        orderBy: { createdAt: 'desc' },
+        orderBy: { seq: 'desc' },
         take: 5,
         include: GALLERY_LIST_INCLUDE,
       }),

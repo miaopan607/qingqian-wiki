@@ -161,6 +161,7 @@ export default function AdminGalleries() {
             <TableHeader>
               <TableRow>
                 <TableHead>封面</TableHead>
+                <TableHead>序号</TableHead>
                 <TableHead>标题</TableHead>
                 <TableHead>图片</TableHead>
                 <TableHead>状态</TableHead>
@@ -183,6 +184,7 @@ export default function AdminGalleries() {
                       <span className="block size-12 rounded-lg bg-surface-alt" />
                     )}
                   </TableCell>
+                  <TableCell className="tabular-nums">{gallery.seq}</TableCell>
                   <TableCell>
                     <Link
                       to={`/admin/galleries/${gallery.id}/edit`}

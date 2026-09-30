@@ -30,7 +30,7 @@ router.get(
     const [favorites, total] = await Promise.all([
       prisma.favorite.findMany({
         where: { userUid: user.uid },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { gallery: { seq: 'desc' } },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: { gallery: { include: GALLERY_LIST_INCLUDE } },

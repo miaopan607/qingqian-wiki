@@ -99,6 +99,7 @@ model MediaAsset {
 
 model Gallery {
   id             String         @id @default(cuid())
+  seq            Int            @unique
   title          String
   description    String         @default("")
   status         GalleryStatus  @default(draft)

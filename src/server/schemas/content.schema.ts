@@ -15,7 +15,15 @@ const descriptionField = z
   .max(CONTENT_DESCRIPTION_MAX_LENGTH, `描述最多 ${CONTENT_DESCRIPTION_MAX_LENGTH} 个字符`)
   .optional()
 
+const seqField = z.coerce
+  .number({ error: '序号必须是数字' })
+  .int('序号必须是整数')
+  .min(1, '序号至少为 1')
+  .max(9999, '序号最大为 9999')
+  .optional()
+
 export const galleryCreateSchema = z.object({
+  seq: seqField,
   title: z
     .string({ error: '标题不能为空' })
     .trim()
@@ -28,6 +36,7 @@ export const galleryCreateSchema = z.object({
 
 export const galleryUpdateSchema = z
   .object({
+    seq: seqField,
     title: z
       .string()
       .trim()

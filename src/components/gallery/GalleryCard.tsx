@@ -29,6 +29,9 @@ export function GalleryCard({ gallery, priority, className }: GalleryCardProps) 
           wrapperClassName="w-full"
         />
         <div className="flex flex-col gap-2 p-4">
+          <Badge tone="accent" className="self-start">
+            第 {gallery.seq} 组
+          </Badge>
           <div className="flex items-start justify-between gap-2">
             <h3 className="line-clamp-1 text-base text-ink">{gallery.title}</h3>
             {gallery.status === 'draft' && <Badge tone="muted">草稿</Badge>}

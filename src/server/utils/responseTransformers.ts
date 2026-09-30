@@ -22,6 +22,7 @@ export type ImagePayload = { id: string; sortOrder: number; asset: AssetFields }
 
 export type GalleryListPayload = {
   id: string
+  seq: number
   title: string
   description: string
   status: 'draft' | 'published'
@@ -36,6 +37,7 @@ export type GalleryListPayload = {
 
 export type GalleryDetailPayload = {
   id: string
+  seq: number
   title: string
   description: string
   status: 'draft' | 'published'
@@ -128,6 +130,7 @@ function toCoverPayload(images: Array<{ asset: AssetFields }>) {
 export function toGalleryListItem(gallery: GalleryListPayload, interaction?: GalleryInteraction) {
   return {
     id: gallery.id,
+    seq: gallery.seq,
     title: gallery.title,
     description: gallery.description,
     status: gallery.status,
@@ -146,6 +149,7 @@ export function toGalleryListItem(gallery: GalleryListPayload, interaction?: Gal
 export function toGalleryDetail(gallery: GalleryDetailPayload, interaction?: GalleryInteraction) {
   return {
     id: gallery.id,
+    seq: gallery.seq,
     title: gallery.title,
     description: gallery.description,
     status: gallery.status,

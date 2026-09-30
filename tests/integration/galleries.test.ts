@@ -50,6 +50,50 @@ describe('图集管理', () => {
     expect(list.body.items[0].imagesCount).toBe(1)
   })
 
+  it('序号默认递增，支持修改，全部列表按序号降序且拒绝重号', async () => {
+    const { agent, xsrf, created, assetId } = await createGalleryAsAdmin()
+    expect(created.body.gallery.seq).toBe(1)
+    const second = await agent
+      .post('/api/admin/galleries')
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ title: '第二组', assetIds: [assetId] })
+    expect(second.status).toBe(201)
+    expect(second.body.gallery.seq).toBe(2)
+
+    const changed = await agent
+      .patch(`/api/admin/galleries/${created.body.gallery.id}`)
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ seq: 5 })
+    expect(changed.status).toBe(200)
+    expect(changed.body.gallery.seq).toBe(5)
+    const conflict = await agent
+      .patch(`/api/admin/galleries/${second.body.gallery.id}`)
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ seq: 5 })
+    expect(conflict.status).toBe(409)
+    const duplicate = await agent
+      .post('/api/admin/galleries')
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ seq: 5, title: '重号', assetIds: [assetId] })
+    expect(duplicate.status).toBe(409)
+
+    const list = await createAnonymousAgent().get('/api/galleries?page=1&pageSize=1')
+    expect(list.body.items.map((item: { seq: number }) => item.seq)).toEqual([5])
+    const nextPage = await createAnonymousAgent().get('/api/galleries?page=2&pageSize=1')
+    expect(nextPage.body.items.map((item: { seq: number }) => item.seq)).toEqual([2])
+    const adminList = await agent.get('/api/admin/galleries')
+    expect(adminList.body.items.map((item: { seq: number }) => item.seq)).toEqual([5, 2])
+    expect(adminList.body.nextSeq).toBe(6)
+    const stats = await agent.get('/api/admin/stats')
+    expect(stats.body.latestGalleries.map((item: { seq: number }) => item.seq)).toEqual([5, 2])
+
+    for (const id of [created.body.gallery.id, second.body.gallery.id]) {
+      await agent.post(`/api/galleries/${id}/favorite`).set('X-XSRF-TOKEN', xsrf)
+    }
+    const favorites = await agent.get('/api/me/favorites')
+    expect(favorites.body.items.map((item: { seq: number }) => item.seq)).toEqual([5, 2])
+  })
+
   it('详情返回全部图片与互动状态', async () => {
     const { created } = await createGalleryAsAdmin()
     const galleryId = created.body.gallery.id

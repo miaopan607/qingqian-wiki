@@ -26,7 +26,7 @@ export type MeResponse = { user: AuthUser | null }
 export type AuthResponse = { user: AuthUser }
 export type SetupStatusResponse = { initialized: boolean; requiresSetup: boolean }
 
-export type GalleryListResponse = Paginated<GalleryItem>
+export type GalleryListResponse = Paginated<GalleryItem> & { nextSeq?: number }
 export type GalleryDetailResponse = { gallery: GalleryDetail }
 export type KeycapListResponse = Paginated<KeycapItem> & { nextSeq?: number }
 export type KeycapDetailResponse = { keycap: KeycapDetail }

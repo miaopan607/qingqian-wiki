@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import { Router } from 'express'
 
 import { asyncHandler } from '../middleware/asyncHandler'
@@ -12,6 +13,7 @@ import {
   validateQuery,
 } from '../schemas'
 import { deleteAssetsIfUnreferenced, syncContentImages } from '../services/media.service'
+import { AppError } from '../utils/appError'
 import {
   GALLERY_DETAIL_INCLUDE,
   GALLERY_LIST_INCLUDE,
@@ -22,6 +24,11 @@ import { readParam } from '../utils/routeParams'
 import type { AuthenticatedRequest } from '../types'
 
 const router = Router()
+
+async function findNextSeq(): Promise<number> {
+  const result = await prisma.gallery.aggregate({ _max: { seq: true } })
+  return (result._max.seq ?? 0) + 1
+}
 
 router.get(
   '/',
@@ -40,15 +47,16 @@ router.get(
       ...(q ? { title: { contains: q, mode: 'insensitive' as const } } : {}),
     }
 
-    const [galleries, total] = await Promise.all([
+    const [galleries, total, nextSeq] = await Promise.all([
       prisma.gallery.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { seq: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: GALLERY_LIST_INCLUDE,
       }),
       prisma.gallery.count({ where }),
+      findNextSeq(),
     ])
 
     res.json({
@@ -56,6 +64,7 @@ router.get(
       total,
       page,
       pageSize,
+      nextSeq,
     })
   })
 )
@@ -82,28 +91,39 @@ router.post(
   apiKeyWriteLimiter,
   validateBody(galleryCreateSchema),
   asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const { title, description, status, assetIds } = req.body as {
+    const { seq, title, description, status, assetIds } = req.body as {
+      seq?: number
       title: string
       description?: string
       status: 'draft' | 'published'
       assetIds: string[]
     }
 
-    const galleryId = await prisma.$transaction(async (tx) => {
-      const gallery = await tx.gallery.create({
-        data: {
-          title,
-          description: description ?? '',
-          status,
-          authorUid: req.authUser!.uid,
-          publishedAt: status === 'published' ? new Date() : null,
-        },
-        select: { id: true },
-      })
+    const nextSeq = seq ?? (await findNextSeq())
 
-      await syncContentImages(tx, { type: 'gallery', id: gallery.id }, assetIds)
-      return gallery.id
-    })
+    const galleryId = await prisma
+      .$transaction(async (tx) => {
+        const gallery = await tx.gallery.create({
+          data: {
+            seq: nextSeq,
+            title,
+            description: description ?? '',
+            status,
+            authorUid: req.authUser!.uid,
+            publishedAt: status === 'published' ? new Date() : null,
+          },
+          select: { id: true },
+        })
+
+        await syncContentImages(tx, { type: 'gallery', id: gallery.id }, assetIds)
+        return gallery.id
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new AppError('该序号已被占用', 409)
+        }
+        throw error
+      })
 
     const gallery = await prisma.gallery.findUniqueOrThrow({
       where: { id: galleryId },
@@ -120,7 +140,8 @@ router.patch(
   validateBody(galleryUpdateSchema),
   asyncHandler(async (req, res) => {
     const id = readParam(req.params.id)
-    const { title, description, status, assetIds } = req.body as {
+    const { seq, title, description, status, assetIds } = req.body as {
+      seq?: number
       title?: string
       description?: string
       status?: 'draft' | 'published'
@@ -136,24 +157,32 @@ router.patch(
       return
     }
 
-    const removedAssetIds = await prisma.$transaction(async (tx) => {
-      await tx.gallery.update({
-        where: { id },
-        data: {
-          ...(title === undefined ? {} : { title }),
-          ...(description === undefined ? {} : { description }),
-          ...(status === undefined
-            ? {}
-            : {
-                status,
-                publishedAt: status === 'published' ? (existing.publishedAt ?? new Date()) : null,
-              }),
-        },
-      })
+    const removedAssetIds = await prisma
+      .$transaction(async (tx) => {
+        await tx.gallery.update({
+          where: { id },
+          data: {
+            ...(seq === undefined ? {} : { seq }),
+            ...(title === undefined ? {} : { title }),
+            ...(description === undefined ? {} : { description }),
+            ...(status === undefined
+              ? {}
+              : {
+                  status,
+                  publishedAt: status === 'published' ? (existing.publishedAt ?? new Date()) : null,
+                }),
+          },
+        })
 
-      if (!assetIds) return []
-      return syncContentImages(tx, { type: 'gallery', id }, assetIds)
-    })
+        if (!assetIds) return []
+        return syncContentImages(tx, { type: 'gallery', id }, assetIds)
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+          throw new AppError('该序号已被占用', 409)
+        }
+        throw error
+      })
 
     await deleteAssetsIfUnreferenced(removedAssetIds)
 
