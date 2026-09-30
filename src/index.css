@@ -19,6 +19,8 @@
   --color-accent-contrast: #f7fbfa;
   --color-vermilion: #a9554a;
   --color-danger: #a5453c;
+  --color-viewer: #090d0e;
+  --color-viewer-ink: #f7fbfa;
 
   --radius-card: 0.75rem;
   --shadow-card: 0 10px 30px rgb(34 48 47 / 0.07);
