@@ -40,12 +40,12 @@ function createLimiter(options: LimiterOptions): RequestHandler {
   })
 }
 
-export const globalLimiter = createLimiter({ windowMs: MINUTE, limit: 300 })
-export const authLimiter = createLimiter({ windowMs: 15 * MINUTE, limit: 10 })
-export const uploadLimiter = createLimiter({ windowMs: 10 * MINUTE, limit: 60 })
-export const writeLimiter = createLimiter({ windowMs: MINUTE, limit: 60 })
+export const globalLimiter = createLimiter({ windowMs: MINUTE, limit: 3000 })
+export const authLimiter = createLimiter({ windowMs: 15 * MINUTE, limit: 20 })
+export const uploadLimiter = createLimiter({ windowMs: 10 * MINUTE, limit: 600 })
+export const writeLimiter = createLimiter({ windowMs: MINUTE, limit: 600 })
 
-const apiKeyUserLimiter = createLimiter({ windowMs: MINUTE, limit: 300 })
+const apiKeyUserLimiter = createLimiter({ windowMs: MINUTE, limit: 3000 })
 
 export const apiKeyLimiter: RequestHandler = (req, res, next) => {
   if ((req as AuthenticatedRequest).authMethod !== 'api_key') {
