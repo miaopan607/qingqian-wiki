@@ -510,7 +510,6 @@ export default function CheckIn() {
       <header className="flex flex-col items-center gap-4 py-12 text-center md:py-16">
         <p className="font-serif text-4xl tracking-[0.2em] text-ink md:text-5xl">{config.name}</p>
         <PageHeader title="30天签到" className="font-serif" />
-        <p className="text-sm text-ink-muted">让每一天的相聚，在清浅留下时间的印记。</p>
       </header>
       {/* 切换账号时销毁个人快照及挑战，不能沿用上一位用户的 token。 */}
       <CheckInEvent key={user?.uid ?? 'guest'} />
