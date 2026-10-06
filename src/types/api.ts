@@ -67,7 +67,14 @@ export type CreateApiKeyInput = {
 }
 
 export type CheckInStatusResponse = {
-  event: { id: string; startsAt: string; endsAt: string; days: 30; rewardLabel: string }
+  event: {
+    id: string
+    debug: boolean
+    startsAt: string
+    endsAt: string
+    days: 30
+    rewardLabel: string
+  }
   serverNow: string
   phase: 'upcoming' | 'active' | 'ended'
   dayIndex: number | null

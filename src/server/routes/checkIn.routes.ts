@@ -15,6 +15,7 @@ import {
   toCheckInRecord,
 } from '../services/checkIn.service'
 import { getTurnstileSiteKey, verifyCheckInTurnstile } from '../services/turnstile.service'
+import { getCheckInNow } from '../services/checkInClock.service'
 import type { AuthenticatedRequest } from '../types'
 import type { SubmitCheckInInput } from '../../types/api'
 import { AppError } from '../utils/appError'
@@ -34,7 +35,7 @@ function requireCurrentDay(now: Date, dayIndex: number) {
 router.get(
   '/',
   asyncHandler(async (req: AuthenticatedRequest, res) => {
-    const now = new Date()
+    const now = getCheckInNow()
     const window = getCheckInWindow(now)
     res.setHeader('Cache-Control', 'private, no-store')
     res.json({
@@ -57,13 +58,13 @@ router.post(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const { turnstileToken, dayIndex } = req.body as SubmitCheckInInput
     const userUid = req.authUser!.uid
-    requireCurrentDay(new Date(), dayIndex)
+    requireCurrentDay(getCheckInNow(), dayIndex)
     const key = { eventId: CHECK_IN_EVENT_ID, userUid, dayIndex }
     const alreadyDone = () => new AppError('今日已签到', 409, 'CHECK_IN_ALREADY_DONE')
     if (await prisma.checkIn.findUnique({ where: { eventId_userUid_dayIndex: key } }))
       throw alreadyDone()
     await verifyCheckInTurnstile(turnstileToken, req.ip)
-    const checkedInAt = new Date(Math.floor(Date.now() / 1000) * 1000)
+    const checkedInAt = new Date(Math.floor(getCheckInNow().getTime() / 1000) * 1000)
     const window = requireCurrentDay(checkedInAt, dayIndex)
     try {
       const record = await prisma.checkIn.create({
@@ -86,7 +87,7 @@ router.get(
   '/rankings',
   validateQuery(publicListQuerySchema),
   asyncHandler(async (req, res) => {
-    if (getCheckInWindow(new Date()).phase !== 'ended') {
+    if (getCheckInWindow(getCheckInNow()).phase !== 'ended') {
       throw new AppError('活动结束后公示排名', 403, 'CHECK_IN_RANKINGS_HIDDEN')
     }
     const { page, pageSize } = req.query as unknown as { page: number; pageSize: number }

@@ -11,6 +11,7 @@ dotenv.config({ path: path.resolve(__dirname, '.env.test'), override: true, quie
 const testUploadsPath = path.join(os.tmpdir(), 'qingqian-wiki-test-uploads')
 process.env.UPLOADS_PATH = testUploadsPath
 process.env.NODE_ENV = 'test'
+process.env.CHECK_IN_DEV_TIME = ''
 
 export default defineConfig({
   resolve: {

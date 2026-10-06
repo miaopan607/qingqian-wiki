@@ -3,6 +3,7 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { requireAdmin } from '../middleware/auth'
 import { adminCheckInQuerySchema, validateQuery } from '../schemas'
 import { getAdminCheckInSnapshot } from '../services/checkIn.service'
+import { getCheckInNow } from '../services/checkInClock.service'
 import type { AdminCheckInParticipant } from '../../types/entities'
 
 const router = Router()
@@ -17,7 +18,7 @@ router.get(
       q?: string
       state?: AdminCheckInParticipant['state']
     }
-    const snapshotAt = new Date()
+    const snapshotAt = getCheckInNow()
     res.setHeader('Cache-Control', 'private, no-store')
     res.json(await getAdminCheckInSnapshot(snapshotAt, query))
   })

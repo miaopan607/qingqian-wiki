@@ -2,8 +2,9 @@ import { Prisma, type CheckIn } from '@prisma/client'
 import type { AdminCheckInResponse, CheckInRankingResponse } from '../../types/api'
 import type { AdminCheckInParticipant, CheckInProgress, CheckInRecord } from '../../types/entities'
 import { prisma } from '../prisma'
+import { CHECK_IN_DEBUG } from './checkInClock.service'
 
-export const CHECK_IN_EVENT_ID = '2026-10-07'
+export const CHECK_IN_EVENT_ID = CHECK_IN_DEBUG ? 'dev-2026-10-07' : '2026-10-07'
 export const CHECK_IN_START = new Date('2026-10-06T21:00:00.000Z')
 export const CHECK_IN_END = new Date('2026-11-05T21:00:00.000Z')
 export const CHECK_IN_DAYS = 30
@@ -11,6 +12,7 @@ const DAY_MS = 86400000
 
 export const CHECK_IN_EVENT = {
   id: CHECK_IN_EVENT_ID,
+  debug: CHECK_IN_DEBUG,
   startsAt: CHECK_IN_START.toISOString(),
   endsAt: CHECK_IN_END.toISOString(),
   days: 30 as const,

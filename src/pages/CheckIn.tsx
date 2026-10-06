@@ -305,6 +305,11 @@ function CheckInEvent() {
           </li>
           <li>活动期间仅能查看自己的进度与均值，最终排名在活动结束后公开。</li>
         </ul>
+        {data?.event.debug && (
+          <p role="status" className="mt-3 text-sm text-danger">
+            本地调试活动：使用模拟活动时间，仍需真实人机验证；记录与正式活动隔离，不参与正式奖励。
+          </p>
+        )}
       </section>
 
       <Panel className="flex flex-col items-start gap-4">

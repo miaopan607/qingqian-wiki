@@ -108,6 +108,9 @@ export default function AdminCheckIn() {
       />
       <div className="space-y-2 text-sm text-ink-muted">
         <p>北京时间2026年10月7日05:00至11月6日05:00，每日05:00更新，共30个签到日。</p>
+        {data?.event.debug && (
+          <p className="text-danger">本地调试活动：以下数据与正式活动隔离，不参与正式排名。</p>
+        )}
         {data && (
           <>
             <p>活动阶段：{PHASE_LABEL[data.phase]}</p>

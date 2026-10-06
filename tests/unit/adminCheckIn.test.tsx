@@ -95,6 +95,7 @@ beforeEach(() => {
   currentSnapshot = {
     event: {
       id: '2026-10-07',
+      debug: false,
       startsAt: '2026-10-06T21:00:00.000Z',
       endsAt: '2026-11-05T21:00:00.000Z',
       days: 30,

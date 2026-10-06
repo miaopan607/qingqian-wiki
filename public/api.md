@@ -83,6 +83,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 后台支持q（昵称不区分大小写包含匹配或完整UID）、state（in_progress/missed/completed）及上述分页参数。响应包含snapshotAt、event、phase、dayIndex、全活动summary、固定30项daily和本页items；每人items带全部records及missedDayIndexes。搜索与状态筛选只改变items/total，不改变全活动汇总；今日待签不计漏签，未来记录不计入当前快照。活动期间rank=null、winner=false，结束后沿用全榜名次，搜索不重排名次。接口不公开邮箱、IP、人机验证token或secret；不提供成绩写入管理接口。
 
+event额外包含debug布尔值：正常运行为false。开发环境设置`CHECK_IN_DEV_TIME`可提前进行真实链路验收，此时debug=true、event.id为`dev-2026-10-07`，serverNow与snapshotAt采用推进中的调试活动时间；记录、进度与排名均与正式活动隔离，仍必须通过真实Turnstile，不影响登录或token有效期。生产/自动测试环境禁止设置该参数。
+
 签到及后台状态响应均禁止HTTP缓存；后台需手动重新请求获取新情况，不提供推送或自动刷新。主要错误码：
 
 | HTTP | code                                             | 说明                                                       |
