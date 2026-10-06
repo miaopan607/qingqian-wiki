@@ -53,8 +53,22 @@ model User {
   favorites     Favorite[]
   mediaAssets   MediaAsset[]  @relation("UserMediaAssets")
   apiKeys       ApiKey[]
+  checkIns      CheckIn[]
 
   @@index([status, createdAt])
+}
+
+model CheckIn {
+  id           String   @id @default(cuid())
+  eventId      String
+  userUid      String
+  dayIndex     Int
+  checkedInAt  DateTime
+  scoreSeconds Int
+  user         User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@unique([eventId, userUid, dayIndex])
+  @@index([eventId, userUid])
 }
 
 model ApiKey {

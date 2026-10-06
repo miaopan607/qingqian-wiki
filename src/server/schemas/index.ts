@@ -30,3 +30,4 @@ export {
   assetIdParamSchema,
 } from './admin.schema'
 export { createApiKeySchema } from './apiKey.schema'
+export { checkInBodySchema, adminCheckInQuerySchema } from './checkIn.schema'

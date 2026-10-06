@@ -1,5 +1,6 @@
 import {
   ArrowLeft,
+  CalendarCheck,
   Image as ImageIcon,
   Keyboard,
   LayoutDashboard,
@@ -31,6 +32,7 @@ const NAV_ITEMS: AdminNavItem[] = [
   { to: '/admin', label: '仪表盘', icon: LayoutDashboard, end: true },
   { to: '/admin/galleries', label: '美图管理', icon: ImageIcon },
   { to: '/admin/keycaps', label: '键帽管理', icon: Keyboard },
+  { to: '/admin/check-in', label: '签到活动', icon: CalendarCheck },
   { to: '/admin/users', label: '用户管理', icon: Users, superAdminOnly: true },
   { to: '/admin/settings', label: '站点设置', icon: Settings, superAdminOnly: true },
 ]

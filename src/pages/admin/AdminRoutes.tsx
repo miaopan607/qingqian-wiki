@@ -13,6 +13,7 @@ const AdminKeycaps = lazy(() => import('./AdminKeycaps'))
 const AdminKeycapEdit = lazy(() => import('./AdminKeycapEdit'))
 const AdminUsers = lazy(() => import('./AdminUsers'))
 const AdminSettings = lazy(() => import('./AdminSettings'))
+const AdminCheckIn = lazy(() => import('./AdminCheckIn'))
 
 function AdminFallback() {
   return (
@@ -36,6 +37,7 @@ export default function AdminRoutes() {
               <Route path="keycaps" element={<AdminKeycaps />} />
               <Route path="keycaps/new" element={<AdminKeycapEdit />} />
               <Route path="keycaps/:keycapId/edit" element={<AdminKeycapEdit />} />
+              <Route path="check-in" element={<AdminCheckIn />} />
               <Route
                 path="users"
                 element={

@@ -3,6 +3,7 @@ import multer from 'multer'
 
 import { UPLOAD_MAX_FILE_SIZE_MB } from '../services/image.service'
 import { logger } from '../utils/logger'
+import { AppError } from '../utils/appError'
 
 type HttpError = Error & { statusCode?: unknown; code?: unknown }
 
@@ -27,7 +28,12 @@ export function errorHandler(
   }
 
   const statusCode = err.statusCode
-  if (typeof statusCode === 'number' && statusCode >= 400 && statusCode < 500) {
+  if (
+    typeof statusCode === 'number' &&
+    statusCode >= 400 &&
+    statusCode < 600 &&
+    (statusCode < 500 || err instanceof AppError)
+  ) {
     res.status(statusCode).json({
       error: err.message,
       ...(typeof err.code === 'string' ? { code: err.code } : {}),

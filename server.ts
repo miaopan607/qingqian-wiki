@@ -30,6 +30,8 @@ import { registerKeycapsRoutes } from './src/server/routes/keycaps.routes'
 import { registerMeRoutes } from './src/server/routes/me.routes'
 import { registerApiKeyRoutes } from './src/server/routes/apiKeys.routes'
 import { registerSetupRoutes } from './src/server/routes/setup.routes'
+import { registerCheckInRoutes } from './src/server/routes/checkIn.routes'
+import { registerAdminCheckInRoutes } from './src/server/routes/admin.checkIn.routes'
 import { logger } from './src/server/utils/logger'
 import { getUploadsDir } from './src/server/utils/uploadsPath'
 
@@ -80,12 +82,13 @@ app.use(
         'default-src': ["'self'"],
         // 开发环境 Vite 会注入内联 React Refresh 预置脚本
         'script-src': isProductionRuntime()
-          ? ["'self'"]
-          : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          ? ["'self'", 'https://challenges.cloudflare.com']
+          : ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://challenges.cloudflare.com'],
         'style-src': ["'self'", "'unsafe-inline'"],
         'font-src': ["'self'", 'data:'],
         'img-src': ["'self'", 'data:', 'blob:'],
         'connect-src': ["'self'", ...(isProductionRuntime() ? [] : ['ws:', 'wss:'])],
+        'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
         'worker-src': ["'self'", 'blob:'],
         'object-src': ["'none'"],
         'frame-ancestors': ["'none'"],
@@ -123,6 +126,7 @@ registerApiKeyRoutes(app)
 registerMeRoutes(app)
 registerGalleriesRoutes(app)
 registerKeycapsRoutes(app)
+registerCheckInRoutes(app)
 registerAdminGalleryRoutes(app)
 registerAdminKeycapRoutes(app)
 registerAdminUploadRoutes(app)
@@ -130,6 +134,7 @@ registerAdminUserRoutes(app)
 registerAdminSettingsRoutes(app)
 registerAdminStatsRoutes(app)
 registerAdminMaintenanceRoutes(app)
+registerAdminCheckInRoutes(app)
 
 // 未匹配的 API 路径返回 JSON 404，避免被 SPA 壳吞掉
 app.use('/api', (_req, res) => {

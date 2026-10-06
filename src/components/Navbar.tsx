@@ -12,6 +12,7 @@ import { Button, IconButton, LinkButton } from './ui'
 const NAV_ITEMS = [
   { to: '/gallery', label: '美图' },
   { to: '/keycaps', label: '键帽' },
+  { to: '/check-in', label: '签到' },
 ]
 
 export function Navbar() {

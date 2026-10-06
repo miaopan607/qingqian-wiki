@@ -16,6 +16,7 @@ const Gallery = lazy(() => import('./pages/Gallery'))
 const GalleryDetail = lazy(() => import('./pages/GalleryDetail'))
 const Keycaps = lazy(() => import('./pages/Keycaps'))
 const KeycapDetail = lazy(() => import('./pages/KeycapDetail'))
+const CheckIn = lazy(() => import('./pages/CheckIn'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
 const Me = lazy(() => import('./pages/Me'))
@@ -73,6 +74,7 @@ function AppShell() {
         <Route path="/gallery/:galleryId" element={<GalleryDetail />} />
         <Route path="/keycaps" element={<Keycaps />} />
         <Route path="/keycaps/:keycapId" element={<KeycapDetail />} />
+        <Route path="/check-in" element={<CheckIn />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/me" element={<Me />} />

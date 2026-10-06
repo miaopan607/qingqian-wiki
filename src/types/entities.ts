@@ -102,3 +102,38 @@ export type Paginated<T> = {
   page: number
   pageSize: number
 }
+
+export type CheckInRecord = {
+  dayIndex: number
+  checkedInAt: string
+  scoreSeconds: number
+}
+
+export type CheckInProgress = {
+  records: CheckInRecord[]
+  completedDays: number
+  averageTimeSeconds: number | null
+  eligible: boolean
+}
+
+export type CheckInRankingItem = {
+  userUid: string
+  displayName: string
+  completedDays: number
+  averageTimeSeconds: number | null
+  rank: number | null
+  winner: boolean
+}
+
+export type AdminCheckInParticipant = {
+  userUid: string
+  displayName: string
+  userStatus: 'active' | 'banned'
+  completedDays: number
+  averageTimeSeconds: number
+  state: 'in_progress' | 'missed' | 'completed'
+  missedDayIndexes: number[]
+  records: CheckInRecord[]
+  rank: number | null
+  winner: boolean
+}

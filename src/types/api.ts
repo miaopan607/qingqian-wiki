@@ -1,4 +1,8 @@
 import type {
+  AdminCheckInParticipant,
+  CheckInProgress,
+  CheckInRecord,
+  CheckInRankingItem,
   AdminStats,
   AdminUserItem,
   AssetRef,
@@ -60,4 +64,34 @@ export type CreateApiKeyInput = {
   name: string
   scope: 'read' | 'read_write'
   expiresInDays: 30 | 90 | 365 | null
+}
+
+export type CheckInStatusResponse = {
+  event: { id: string; startsAt: string; endsAt: string; days: 30; rewardLabel: string }
+  serverNow: string
+  phase: 'upcoming' | 'active' | 'ended'
+  dayIndex: number | null
+  nextTransitionAt: string | null
+  turnstileSiteKey: string | null
+  me: CheckInProgress | null
+}
+export type SubmitCheckInInput = { turnstileToken: string; dayIndex: number }
+export type SubmitCheckInResponse = { record: CheckInRecord }
+export type CheckInRankingResponse = Paginated<CheckInRankingItem> & {
+  qualifiedTotal: number
+}
+export type AdminCheckInResponse = Paginated<AdminCheckInParticipant> & {
+  event: CheckInStatusResponse['event']
+  snapshotAt: string
+  phase: 'upcoming' | 'active' | 'ended'
+  dayIndex: number | null
+  summary: {
+    participants: number
+    totalCheckIns: number
+    completedParticipants: number
+    missedParticipants: number
+    inProgressParticipants: number
+    todayCheckIns: number | null
+  }
+  daily: { dayIndex: number; checkIns: number; closed: boolean }[]
 }

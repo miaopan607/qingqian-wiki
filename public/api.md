@@ -68,6 +68,32 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 密码重置会立即使该用户所有旧密钥失效；封禁账户无法调用密钥。解除封禁后，仍未撤销、未过期且密码未再次改变的密钥可以继续使用。撤销立即生效。永久密钥不会自动到期，泄露后须手动撤销。
 
+## 签到活动（登录会话）
+
+以下接口不接受Bearer API密钥；签到写请求使用登录Cookie及`X-XSRF-TOKEN`，并且必须通过Cloudflare Turnstile。活动为北京时间2026年10月7日05:00至11月6日05:00，每日05:00切日，dayIndex为0至29，不可补签。
+
+| 方法 | 路径                     | 说明                                                                                                                   |
+| ---- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| GET  | `/api/check-in`          | 游客可读规则、服务端时间、阶段及公开site key；登录者额外获得自己的records、completedDays、averageTimeSeconds、eligible |
+| POST | `/api/check-in`          | 请求`{ turnstileToken, dayIndex }`；未封禁用户当天首次签到返回201及record，重复签到409，不覆盖首次时间                 |
+| GET  | `/api/check-in/rankings` | 结束前403，结束后游客可读；page默认1、pageSize默认24且最大100                                                          |
+| GET  | `/api/admin/check-in`    | 未封禁管理员可在全活动期读取加载快照；不需要Turnstile，仅提供读取                                                      |
+
+签到record为`{ dayIndex, checkedInAt, scoreSeconds }`，时间采用UTC ISO字符串，页面转为北京时间。scoreSeconds采用延长时钟：06:00为21600秒，次日01:00为90000秒（25:00）；完成30天者按整数总分排序，用总分判定并列，排名为1、1、3，并列第一winner=true。公示响应包含items、total、page、pageSize、qualifiedTotal；items为用户UID、昵称、已签天数、平均时间、rank与winner。未签满者rank及公开均值为null，不能获奖；无记录账号不入榜。
+
+后台支持q（昵称不区分大小写包含匹配或完整UID）、state（in_progress/missed/completed）及上述分页参数。响应包含snapshotAt、event、phase、dayIndex、全活动summary、固定30项daily和本页items；每人items带全部records及missedDayIndexes。搜索与状态筛选只改变items/total，不改变全活动汇总；今日待签不计漏签，未来记录不计入当前快照。活动期间rank=null、winner=false，结束后沿用全榜名次，搜索不重排名次。接口不公开邮箱、IP、人机验证token或secret；不提供成绩写入管理接口。
+
+签到及后台状态响应均禁止HTTP缓存；后台需手动重新请求获取新情况，不提供推送或自动刷新。主要错误码：
+
+| HTTP | code                                             | 说明                                                       |
+| ---- | ------------------------------------------------ | ---------------------------------------------------------- |
+| 400  | TURNSTILE_FAILED                                 | token无效、过期、已消费，或action/hostname不符，需重新验证 |
+| 403  | CHECK_IN_RANKINGS_HIDDEN                         | 尚未到公示时间                                             |
+| 409  | CHECK_IN_NOT_STARTED / CHECK_IN_ENDED            | 不在活动签到期                                             |
+| 409  | CHECK_IN_ALREADY_DONE                            | 今日已签到                                                 |
+| 409  | CHECK_IN_DAY_CHANGED                             | 验证期间切日，刷新后重新验证                               |
+| 503  | TURNSTILE_NOT_CONFIGURED / TURNSTILE_UNAVAILABLE | 未配置或上游不可用，不写入签到                             |
+
 ## 错误响应
 
 错误使用 JSON `{ "error": "..." }`，部分认证和权限错误还会带 `code`：
