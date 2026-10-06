@@ -159,4 +159,21 @@ describe('后台签到快照', () => {
       ])
     )
   })
+  it('后台能查看参与者绑定的活动微信号', async () => {
+    const admin = await adminSession()
+    const participantUser = await createTestUser({ displayName: '微信参与者' })
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(CHECK_IN_START.getTime() + 3600000))
+    await record(participantUser.user.uid, 0, 18000)
+    await prisma.checkInProfile.create({
+      data: {
+        eventId: CHECK_IN_EVENT_ID,
+        userUid: participantUser.user.uid,
+        wechat: 'wechat_winner_01',
+      },
+    })
+    const response = await admin.agent.get(`/api/admin/check-in?q=${participantUser.user.uid}`)
+    expect(response.status).toBe(200)
+    expect(response.body.items[0].wechat).toBe('wechat_winner_01')
+  })
 })

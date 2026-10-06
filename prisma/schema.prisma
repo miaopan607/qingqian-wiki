@@ -53,6 +53,7 @@ model User {
   favorites     Favorite[]
   mediaAssets   MediaAsset[]  @relation("UserMediaAssets")
   apiKeys       ApiKey[]
+  checkInProfiles CheckInProfile[]
   checkIns      CheckIn[]
 
   @@index([status, createdAt])
@@ -69,6 +70,19 @@ model CheckIn {
 
   @@unique([eventId, userUid, dayIndex])
   @@index([eventId, userUid])
+}
+
+model CheckInProfile {
+  id        String   @id @default(cuid())
+  eventId   String
+  userUid   String
+  wechat    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
+
+  @@unique([eventId, userUid])
+  @@index([eventId])
 }
 
 model ApiKey {

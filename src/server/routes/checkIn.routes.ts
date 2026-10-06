@@ -4,7 +4,13 @@ import { asyncHandler } from '../middleware/asyncHandler'
 import { requireActiveUser } from '../middleware/auth'
 import { writeLimiter } from '../middleware/rateLimit'
 import { prisma } from '../prisma'
-import { checkInBodySchema, publicListQuerySchema, validateBody, validateQuery } from '../schemas'
+import {
+  checkInBodySchema,
+  publicListQuerySchema,
+  updateCheckInProfileSchema,
+  validateBody,
+  validateQuery,
+} from '../schemas'
 import {
   CHECK_IN_EVENT,
   CHECK_IN_EVENT_ID,
@@ -13,6 +19,7 @@ import {
   getCheckInProgress,
   getCheckInRankings,
   toCheckInRecord,
+  setCheckInWechat,
 } from '../services/checkIn.service'
 import { getTurnstileSiteKey, verifyCheckInTurnstile } from '../services/turnstile.service'
 import { getCheckInNow } from '../services/checkInClock.service'
@@ -47,6 +54,18 @@ router.get(
       turnstileSiteKey: getTurnstileSiteKey(),
       me: req.authUser ? await getCheckInProgress(req.authUser.uid) : null,
     })
+  })
+)
+
+router.put(
+  '/wechat',
+  requireActiveUser,
+  writeLimiter,
+  validateBody(updateCheckInProfileSchema),
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const { wechat } = req.body as { wechat: string | null }
+    const updatedWechat = await setCheckInWechat(req.authUser!.uid, wechat)
+    res.json({ wechat: updatedWechat })
   })
 )
 

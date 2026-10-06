@@ -60,10 +60,16 @@ export function toCheckInRecord(record: CheckIn): CheckInRecord {
 }
 
 export async function getCheckInProgress(userUid: string): Promise<CheckInProgress> {
-  const records = await prisma.checkIn.findMany({
-    where: { eventId: CHECK_IN_EVENT_ID, userUid },
-    orderBy: { dayIndex: 'asc' },
-  })
+  const [records, profile] = await Promise.all([
+    prisma.checkIn.findMany({
+      where: { eventId: CHECK_IN_EVENT_ID, userUid },
+      orderBy: { dayIndex: 'asc' },
+    }),
+    prisma.checkInProfile.findUnique({
+      where: { eventId_userUid: { eventId: CHECK_IN_EVENT_ID, userUid } },
+      select: { wechat: true },
+    }),
+  ])
   return {
     records: records.map(toCheckInRecord),
     completedDays: records.length,
@@ -71,7 +77,27 @@ export async function getCheckInProgress(userUid: string): Promise<CheckInProgre
       ? records.reduce((total, record) => total + record.scoreSeconds, 0) / records.length
       : null,
     eligible: records.length === CHECK_IN_DAYS,
+    wechat: profile?.wechat ?? null,
   }
+}
+
+export async function setCheckInWechat(
+  userUid: string,
+  wechat: string | null
+): Promise<string | null> {
+  if (wechat === null) {
+    await prisma.checkInProfile.deleteMany({
+      where: { eventId: CHECK_IN_EVENT_ID, userUid },
+    })
+    return null
+  }
+  const updated = await prisma.checkInProfile.upsert({
+    where: { eventId_userUid: { eventId: CHECK_IN_EVENT_ID, userUid } },
+    create: { eventId: CHECK_IN_EVENT_ID, userUid, wechat },
+    update: { wechat },
+    select: { wechat: true },
+  })
+  return updated.wechat
 }
 
 function eventWhere(snapshotAt?: Date): Prisma.CheckInWhereInput {
@@ -237,6 +263,10 @@ export async function getAdminCheckInSnapshot(
           displayName: true,
           status: true,
           checkIns: { where, orderBy: { dayIndex: 'asc' } },
+          checkInProfiles: {
+            where: { eventId: CHECK_IN_EVENT_ID },
+            select: { wechat: true },
+          },
         },
       })
       const userMap = new Map(users.map((user) => [user.uid, user]))
@@ -261,6 +291,7 @@ export async function getAdminCheckInSnapshot(
         items: selected.map((item) => ({
           userUid: item.userUid,
           displayName: userMap.get(item.userUid)!.displayName,
+          wechat: userMap.get(item.userUid)!.checkInProfiles[0]?.wechat ?? null,
           userStatus: userMap.get(item.userUid)!.status,
           completedDays: item.completedDays,
           averageTimeSeconds: item.averageTimeSeconds,

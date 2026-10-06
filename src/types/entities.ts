@@ -114,6 +114,7 @@ export type CheckInProgress = {
   completedDays: number
   averageTimeSeconds: number | null
   eligible: boolean
+  wechat: string | null
 }
 
 export type CheckInRankingItem = {
@@ -128,6 +129,7 @@ export type CheckInRankingItem = {
 export type AdminCheckInParticipant = {
   userUid: string
   displayName: string
+  wechat: string | null
   userStatus: 'active' | 'banned'
   completedDays: number
   averageTimeSeconds: number

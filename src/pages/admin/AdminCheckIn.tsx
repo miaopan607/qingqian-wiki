@@ -269,6 +269,7 @@ export default function AdminCheckIn() {
               <TableHeader>
                 <TableRow>
                   <TableHead>昵称 / UID</TableHead>
+                  <TableHead>微信号</TableHead>
                   <TableHead>账号状态</TableHead>
                   <TableHead>签到天数</TableHead>
                   <TableHead>平均签到时间</TableHead>
@@ -285,6 +286,15 @@ export default function AdminCheckIn() {
                     <TableCell>
                       <span className="block font-medium">{item.displayName}</span>
                       <span className="text-xs text-ink-muted">{item.userUid}</span>
+                    </TableCell>
+                    <TableCell>
+                      {item.wechat ? (
+                        <span className="font-mono text-sm font-medium text-ink">
+                          {item.wechat}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-ink-muted">未填写</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge tone={item.userStatus === 'banned' ? 'danger' : 'muted'}>
@@ -359,10 +369,20 @@ export default function AdminCheckIn() {
             description={`UID：${detail.userUid}。数据截至北京时间${formatCheckInDateTime(data.snapshotAt)}，所有实际时间均为北京时间。`}
             className="sm:w-[min(56rem,calc(100vw-2rem))]"
           >
-            <p className="text-sm text-ink-muted">
-              已签{detail.completedDays}/30，平均延长时钟时间
-              {formatCheckInScore(detail.averageTimeSeconds)}。今日待签和未来日期不计入漏签。
-            </p>
+            <div className="space-y-1 text-sm text-ink-muted">
+              <p>
+                微信号：
+                {detail.wechat ? (
+                  <span className="font-mono font-medium text-ink">{detail.wechat}</span>
+                ) : (
+                  <span className="text-xs">未填写</span>
+                )}
+              </p>
+              <p>
+                已签{detail.completedDays}/30，平均延长时钟时间
+                {formatCheckInScore(detail.averageTimeSeconds)}。今日待签和未来日期不计入漏签。
+              </p>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>

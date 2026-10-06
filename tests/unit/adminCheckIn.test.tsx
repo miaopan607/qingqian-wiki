@@ -33,6 +33,7 @@ const admin: AuthUser = {
 const participant: AdminCheckInParticipant = {
   userUid: 'participant-a',
   displayName: '早春',
+  wechat: 'wx_zaochun_01',
   userStatus: 'active',
   completedDays: 3,
   averageTimeSeconds: 43200,
@@ -49,6 +50,7 @@ const participant: AdminCheckInParticipant = {
 const missedParticipant: AdminCheckInParticipant = {
   userUid: 'participant-b',
   displayName: '晚秋',
+  wechat: null,
   userStatus: 'banned',
   completedDays: 1,
   averageTimeSeconds: 25200,
@@ -151,10 +153,13 @@ describe('后台签到快照', () => {
     expect(within(dailyTable).getByText('11月5日').closest('tr')).toHaveTextContent('未开始')
     expect(screen.getByText('早春').closest('tr')).toHaveTextContent('12:00:00')
     expect(screen.getByText('早春').closest('tr')).toHaveTextContent('活动结束后确定')
+    expect(screen.getByText('早春').closest('tr')).toHaveTextContent('wx_zaochun_01')
+    expect(screen.getByText('晚秋').closest('tr')).toHaveTextContent('未填写')
     fireEvent.click(screen.getByRole('button', { name: '查看 早春 的明细' }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('2026-10-09 01:00:00')).toBeInTheDocument()
     expect(within(dialog).getByText('25:00:00')).toBeInTheDocument()
+    expect(within(dialog).getByText('wx_zaochun_01')).toBeInTheDocument()
     expect(within(dialog).getAllByRole('row')).toHaveLength(31)
     expect(within(dialog).getByText('第3天 · 10月9日').closest('tr')).toHaveTextContent('已签')
     expect(within(dialog).getByText('第30天 · 11月5日').closest('tr')).toHaveTextContent('未到')

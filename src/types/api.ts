@@ -84,6 +84,8 @@ export type CheckInStatusResponse = {
 }
 export type SubmitCheckInInput = { turnstileToken: string; dayIndex: number }
 export type SubmitCheckInResponse = { record: CheckInRecord }
+export type UpdateCheckInProfileInput = { wechat: string | null }
+export type UpdateCheckInProfileResponse = { wechat: string | null }
 export type CheckInRankingResponse = Paginated<CheckInRankingItem> & {
   qualifiedTotal: number
 }

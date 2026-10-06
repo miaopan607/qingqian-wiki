@@ -14,6 +14,7 @@ export { app, prisma }
 // 按外键依赖顺序清库，保证每个用例从空库开始
 export async function resetDatabase(): Promise<void> {
   await prisma.$transaction([
+    prisma.checkInProfile.deleteMany(),
     prisma.checkIn.deleteMany(),
     prisma.apiKey.deleteMany(),
     prisma.favorite.deleteMany(),

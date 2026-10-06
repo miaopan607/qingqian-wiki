@@ -7,6 +7,8 @@ import {
   Button,
   EmptyState,
   ErrorState,
+  Field,
+  Input,
   LinkButton,
   PageHeader,
   Panel,
@@ -18,11 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui'
+import { useToast } from '../components/Toast'
 import { useAuth } from '../context/AuthContext'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { usePagination } from '../hooks/usePagination'
 import { useSiteConfig } from '../hooks/useSiteConfig'
-import { apiGet, apiPost } from '../lib/apiClient'
+import { apiGet, apiPost, apiRequest } from '../lib/apiClient'
 import {
   formatCheckInDateTime,
   formatCheckInScore,
@@ -35,6 +38,8 @@ import type {
   CheckInStatusResponse,
   SubmitCheckInInput,
   SubmitCheckInResponse,
+  UpdateCheckInProfileInput,
+  UpdateCheckInProfileResponse,
 } from '../types/api'
 import type { CheckInRecord } from '../types/entities'
 
@@ -142,6 +147,11 @@ function CheckInEvent() {
   const [submitting, setSubmitting] = useState(false)
   const [refreshRequested, setRefreshRequested] = useState(true)
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
+  const toast = useToast()
+  const [wechatInput, setWechatInput] = useState('')
+  const [wechatSaving, setWechatSaving] = useState(false)
+  const [wechatError, setWechatError] = useState<string | null>(null)
+  const [wechatEditing, setWechatEditing] = useState(false)
   const submittingRef = useRef(false)
   const mountedRef = useRef(true)
   const clockRef = useRef<{ response: CheckInStatusResponse; deadline: number | null } | null>(null)
@@ -172,6 +182,34 @@ function CheckInEvent() {
     setRefreshRequested(true)
     status.reload()
   }, [status.reload])
+  useEffect(() => {
+    if (status.data?.me) {
+      setWechatInput(status.data.me.wechat ?? '')
+    }
+  }, [status.data?.me?.wechat])
+
+  const handleWechatSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (wechatSaving) return
+    setWechatSaving(true)
+    setWechatError(null)
+    try {
+      const trimmed = wechatInput.trim()
+      const payload: UpdateCheckInProfileInput = { wechat: trimmed || null }
+      const result = await apiRequest<UpdateCheckInProfileResponse>('/api/check-in/wechat', {
+        method: 'PUT',
+        body: payload,
+      })
+      setWechatInput(result.wechat ?? '')
+      setWechatEditing(false)
+      toast.show({ title: result.wechat ? '微信号已保存' : '微信号已清除', tone: 'success' })
+      refreshStatus()
+    } catch (err) {
+      setWechatError(getErrorMessage(err, '保存微信号失败，请重试'))
+    } finally {
+      setWechatSaving(false)
+    }
+  }
 
   const handleTokenChange = useCallback((nextToken: string | null) => {
     if (!submittingRef.current || nextToken === null) setToken(nextToken)
@@ -489,6 +527,74 @@ function CheckInEvent() {
           </ol>
         )}
       </section>
+
+      {user && data && (
+        <section className="flex flex-col gap-4" aria-labelledby="check-in-wechat-title">
+          <h2 id="check-in-wechat-title" className="font-serif text-xl text-ink">
+            发奖联系方式
+          </h2>
+          <Panel className="flex flex-col gap-4">
+            <p className="text-sm text-ink-muted">
+              微信号仅供管理员在活动结束后发奖联系使用，前台榜单不公开，随时可修改。
+            </p>
+            {!wechatEditing && data.me?.wechat ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <span className="text-xs text-ink-muted">已绑定微信号：</span>
+                  <span className="font-mono text-base font-medium text-ink">{data.me.wechat}</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setWechatInput(data.me?.wechat ?? '')
+                    setWechatEditing(true)
+                  }}
+                >
+                  修改微信号
+                </Button>
+              </div>
+            ) : (
+              <form className="flex flex-col gap-3" onSubmit={handleWechatSubmit}>
+                <Field
+                  label="微信号"
+                  htmlFor="check-in-wechat-input"
+                  hint="仅支持字母、数字、下划线与连字符，最多 30 个字符；清空提交可解除绑定"
+                  error={wechatError}
+                >
+                  <Input
+                    id="check-in-wechat-input"
+                    maxLength={30}
+                    value={wechatInput}
+                    onChange={(event) => setWechatInput(event.target.value)}
+                    placeholder="请输入你的微信号"
+                  />
+                </Field>
+                <div className="flex items-center gap-2">
+                  <Button type="submit" size="sm" loading={wechatSaving}>
+                    保存微信号
+                  </Button>
+                  {data.me?.wechat && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={wechatSaving}
+                      onClick={() => {
+                        setWechatInput(data.me?.wechat ?? '')
+                        setWechatEditing(false)
+                        setWechatError(null)
+                      }}
+                    >
+                      取消
+                    </Button>
+                  )}
+                </div>
+              </form>
+            )}
+          </Panel>
+        </section>
+      )}
 
       {data?.phase === 'ended' ? (
         <CheckInRankings />

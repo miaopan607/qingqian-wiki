@@ -16,9 +16,18 @@ import type {
 } from '../../src/types/api'
 import type { AuthUser } from '../../src/types/entities'
 
-const mocks = vi.hoisted(() => ({ apiGet: vi.fn(), apiPost: vi.fn(), fetchCurrentUser: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  apiGet: vi.fn(),
+  apiPost: vi.fn(),
+  apiRequest: vi.fn(),
+  fetchCurrentUser: vi.fn(),
+}))
 
-vi.mock('../../src/lib/apiClient', () => ({ apiGet: mocks.apiGet, apiPost: mocks.apiPost }))
+vi.mock('../../src/lib/apiClient', () => ({
+  apiGet: mocks.apiGet,
+  apiPost: mocks.apiPost,
+  apiRequest: mocks.apiRequest,
+}))
 vi.mock('../../src/lib/auth', () => ({
   fetchCurrentUser: mocks.fetchCurrentUser,
   logoutRequest: vi.fn(),
@@ -85,7 +94,7 @@ beforeEach(() => {
     dayIndex: 0,
     nextTransitionAt: '2026-10-07T21:00:00.000Z',
     turnstileSiteKey: 'configured-site-key',
-    me: { records: [], completedDays: 0, averageTimeSeconds: null, eligible: false },
+    me: { records: [], completedDays: 0, averageTimeSeconds: null, eligible: false, wechat: null },
   }
   ranking = { items: [], total: 0, page: 1, pageSize: 24, qualifiedTotal: 0 }
   mocks.fetchCurrentUser.mockResolvedValue(user)
@@ -163,7 +172,13 @@ describe('签到页面', () => {
     expect(screen.getByRole('button', { name: '正在签到…' })).toBeDisabled()
     currentStatus = {
       ...currentStatus,
-      me: { records: [record], completedDays: 1, averageTimeSeconds: 21600, eligible: false },
+      me: {
+        records: [record],
+        completedDays: 1,
+        averageTimeSeconds: 21600,
+        eligible: false,
+        wechat: null,
+      },
     }
     await act(async () => {
       submission.resolve({ record })
@@ -230,6 +245,7 @@ describe('签到页面', () => {
         completedDays: 1,
         averageTimeSeconds: record.scoreSeconds,
         eligible: false,
+        wechat: null,
       },
     }
     await act(async () => {
@@ -248,7 +264,13 @@ describe('签到页面', () => {
     mocks.fetchCurrentUser.mockResolvedValue({ ...user, uid: 'participant-b' })
     currentStatus = {
       ...currentStatus,
-      me: { records: [record], completedDays: 1, averageTimeSeconds: 21600, eligible: false },
+      me: {
+        records: [record],
+        completedDays: 1,
+        averageTimeSeconds: 21600,
+        eligible: false,
+        wechat: null,
+      },
     }
     fireEvent.click(screen.getByRole('button', { name: '切换测试账号' }))
     expect(await screen.findByText(/今日已签到/)).toBeInTheDocument()
@@ -372,6 +394,7 @@ describe('签到页面', () => {
         completedDays: 1,
         averageTimeSeconds: 90000,
         eligible: false,
+        wechat: null,
       },
     }
     renderPage()
@@ -393,7 +416,13 @@ describe('签到页面', () => {
     act(() => widgets[0].callback('valid-token'))
     currentStatus = {
       ...currentStatus,
-      me: { records: [record], completedDays: 1, averageTimeSeconds: 21600, eligible: false },
+      me: {
+        records: [record],
+        completedDays: 1,
+        averageTimeSeconds: 21600,
+        eligible: false,
+        wechat: null,
+      },
     }
     fireEvent.click(button)
     expect(await screen.findByText(/今日已签到：北京时间2026-10-07 06:00:00/)).toBeInTheDocument()
@@ -503,6 +532,31 @@ describe('签到页面', () => {
         hasParticipant ? '本次活动无人签满30天，无获奖者。' : '本次活动暂无签到记录'
       )
     ).toBeInTheDocument()
+  })
+  it('登录用户可在活动页面提交与修改微信号', async () => {
+    currentStatus = {
+      ...currentStatus,
+      me: {
+        records: [],
+        completedDays: 0,
+        averageTimeSeconds: null,
+        eligible: false,
+        wechat: null,
+      },
+    }
+    mocks.apiRequest.mockResolvedValueOnce({ wechat: 'wx_qianqian_test' })
+    renderPage()
+    await screen.findByText('发奖联系方式')
+    const input = screen.getByLabelText('微信号')
+    expect(input).toHaveValue('')
+    fireEvent.change(input, { target: { value: 'wx_qianqian_test' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存微信号' }))
+    await waitFor(() =>
+      expect(mocks.apiRequest).toHaveBeenCalledWith('/api/check-in/wechat', {
+        method: 'PUT',
+        body: { wechat: 'wx_qianqian_test' },
+      })
+    )
   })
 })
 
