@@ -1,4 +1,4 @@
-import { Slot } from '@radix-ui/react-slot'
+import { Slottable, Slot } from '@radix-ui/react-slot'
 import { Link, type LinkProps } from 'react-router-dom'
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { Loader2 } from 'lucide-react'
@@ -62,7 +62,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : leftIcon}
-      {children}
+      {asChild ? (
+        // 明确插槽目标，让图标内容合并到子元素。
+        <Slottable>{children}</Slottable>
+      ) : (
+        children
+      )}
     </Component>
   )
 })
