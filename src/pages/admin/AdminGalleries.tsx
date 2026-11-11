@@ -186,12 +186,14 @@ export default function AdminGalleries() {
                   </TableCell>
                   <TableCell className="tabular-nums">{gallery.seq}</TableCell>
                   <TableCell>
-                    <Link
-                      to={`/admin/galleries/${gallery.id}/edit`}
-                      className="line-clamp-1 font-medium text-ink hover:text-accent"
-                    >
-                      {gallery.title}
-                    </Link>
+                    {gallery.title && (
+                      <Link
+                        to={`/admin/galleries/${gallery.id}/edit`}
+                        className="line-clamp-1 font-medium text-ink hover:text-accent"
+                      >
+                        {gallery.title}
+                      </Link>
+                    )}
                     {gallery.description && (
                       <p className="line-clamp-1 text-xs text-ink-muted">{gallery.description}</p>
                     )}
@@ -242,7 +244,13 @@ export default function AdminGalleries() {
       <AlertDialog
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(null)}
-        title={`删除图集「${deleting?.title ?? ''}」？`}
+        title={
+          deleting?.title
+            ? `删除图集「${deleting.title}」？`
+            : deleting
+              ? `删除第 ${deleting.seq} 组图集？`
+              : '删除图集？'
+        }
         description="图集、点赞与收藏记录会被删除，未被其它内容引用的图片文件也会一并清理，操作不可撤销。"
         confirmText="删除"
         tone="danger"

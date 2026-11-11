@@ -32,10 +32,14 @@ export function GalleryCard({ gallery, priority, className }: GalleryCardProps) 
           <Badge tone="accent" className="self-start">
             第 {gallery.seq} 组
           </Badge>
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="line-clamp-1 text-base text-ink">{gallery.title}</h3>
-            {gallery.status === 'draft' && <Badge tone="muted">草稿</Badge>}
-          </div>
+          {(gallery.title || gallery.status === 'draft') && (
+            <div className="flex items-start justify-between gap-2">
+              {gallery.title && (
+                <h3 className="line-clamp-1 text-base text-ink">{gallery.title}</h3>
+              )}
+              {gallery.status === 'draft' && <Badge tone="muted">草稿</Badge>}
+            </div>
+          )}
           {gallery.description && (
             <p className="line-clamp-2 text-sm text-ink-muted">{gallery.description}</p>
           )}

@@ -27,7 +27,6 @@ export const galleryCreateSchema = z.object({
   title: z
     .string({ error: '标题不能为空' })
     .trim()
-    .min(1, '标题不能为空')
     .max(GALLERY_TITLE_MAX_LENGTH, `标题最多 ${GALLERY_TITLE_MAX_LENGTH} 个字符`),
   description: descriptionField,
   status: z.enum(['draft', 'published']).default('published'),
@@ -40,7 +39,6 @@ export const galleryUpdateSchema = z
     title: z
       .string()
       .trim()
-      .min(1, '标题不能为空')
       .max(GALLERY_TITLE_MAX_LENGTH, `标题最多 ${GALLERY_TITLE_MAX_LENGTH} 个字符`)
       .optional(),
     description: descriptionField,

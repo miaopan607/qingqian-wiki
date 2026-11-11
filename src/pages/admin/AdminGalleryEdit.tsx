@@ -131,10 +131,6 @@ export default function AdminGalleryEdit() {
       return
     }
 
-    if (!title.trim()) {
-      setFieldErrors({ title: '标题不能为空' })
-      return
-    }
     if (assets.length === 0) {
       setFieldErrors({ assetIds: '至少上传一张图片' })
       return
@@ -208,7 +204,7 @@ export default function AdminGalleryEdit() {
             />
           </Field>
 
-          <Field label="标题" htmlFor="gallery-title" required error={fieldErrors.title}>
+          <Field label="标题（选填）" htmlFor="gallery-title" error={fieldErrors.title}>
             <Input
               id="gallery-title"
               maxLength={TITLE_MAX}

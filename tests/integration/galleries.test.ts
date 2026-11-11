@@ -14,7 +14,7 @@ beforeEach(async () => {
   await seedSiteConfig()
 })
 
-async function createGalleryAsAdmin(options?: { status?: 'draft' | 'published' }) {
+async function createGalleryAsAdmin(options?: { title?: string; status?: 'draft' | 'published' }) {
   const { user: admin, password } = await createTestUser({ role: 'admin', displayName: '清浅' })
   const { agent, xsrf } = await loginAgent(admin.email, password)
 
@@ -25,7 +25,7 @@ async function createGalleryAsAdmin(options?: { status?: 'draft' | 'published' }
     .post('/api/admin/galleries')
     .set('X-XSRF-TOKEN', xsrf)
     .send({
-      title: '清浅写真',
+      title: options?.title ?? '清浅写真',
       description: '棚拍一组',
       status: options?.status ?? 'published',
       assetIds: [assetId],
@@ -35,6 +35,39 @@ async function createGalleryAsAdmin(options?: { status?: 'draft' | 'published' }
 }
 
 describe('图集管理', () => {
+  it.each(['', '   '])('允许创建和清空无名称图集：%j', async (title) => {
+    const { agent, xsrf, created } = await createGalleryAsAdmin({ title })
+    expect(created.status).toBe(201)
+    const id = created.body.gallery.id
+    const anonymous = createAnonymousAgent()
+    const detail = await anonymous.get(`/api/galleries/${id}`)
+    expect(detail.status).toBe(200)
+    expect(detail.body.gallery.title).toBe('')
+    const list = await anonymous.get('/api/galleries')
+    expect(list.body.items.find((item: { id: string }) => item.id === id)?.title).toBe('')
+
+    const named = await agent
+      .patch(`/api/admin/galleries/${id}`)
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ title: '精选照片' })
+    expect(named.status).toBe(200)
+    expect(named.body.gallery.title).toBe('精选照片')
+    const cleared = await agent
+      .patch(`/api/admin/galleries/${id}`)
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ title })
+    expect(cleared.status).toBe(200)
+    expect((await anonymous.get(`/api/galleries/${id}`)).body.gallery.title).toBe('')
+    const updated = await agent
+      .patch(`/api/admin/galleries/${id}`)
+      .set('X-XSRF-TOKEN', xsrf)
+      .send({ description: '补充描述' })
+    expect(updated.status).toBe(200)
+    const saved = await anonymous.get(`/api/galleries/${id}`)
+    expect(saved.body.gallery.title).toBe('')
+    expect(saved.body.gallery.description).toBe('补充描述')
+  })
+
   it('管理员创建图集并出现在公开列表', async () => {
     const { created } = await createGalleryAsAdmin()
 
