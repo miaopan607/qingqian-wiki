@@ -72,31 +72,37 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## 签到活动（登录会话）
 
-以下接口不接受Bearer API密钥；签到写请求使用登录Cookie及`X-XSRF-TOKEN`，并且必须通过Cloudflare Turnstile。活动为北京时间2026年10月7日05:00至11月6日05:00，每日05:00切日，dayIndex为0至29，不可补签。
+以下接口仅支持登录Cookie会话，不接受Bearer API密钥。所有写请求需要`X-XSRF-TOKEN`；用户签到还必须通过Cloudflare Turnstile。全部接口支持`eventId`查询参数，缺省为`2026-11-22`，旧活动为`2026-10-07`；未知活动返回404 `CHECK_IN_EVENT_NOT_FOUND`。旧活动已归档，普通用户写入返回409 `CHECK_IN_ARCHIVED`，管理员仍可更正。
 
-| 方法 | 路径                     | 说明                                                                                                                   |
-| ---- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| GET  | `/api/check-in`          | 游客可读规则、服务端时间、阶段及公开site key；登录者额外获得自己的records、completedDays、averageTimeSeconds、eligible |
-| POST | `/api/check-in`          | 请求`{ turnstileToken, dayIndex }`；未封禁用户当天首次签到返回201及record，重复签到409，不覆盖首次时间                 |
-| GET  | `/api/check-in/rankings` | 结束前403，结束后游客可读；page默认1、pageSize默认24且最大100                                                          |
-| GET  | `/api/admin/check-in`    | 未封禁管理员可在全活动期读取加载快照；不需要Turnstile，仅提供读取                                                      |
+本期为北京时间2026年11月22日至12月22日。用户首次确认每日刷新分钟`0..1439`，从11月22日该时刻起至12月22日同一时刻止，共30个签到日（`dayIndex=0..29`）。确认后本人不能修改，包括重复提交同值；清空微信、重新登录均不解锁。允许活动中首次设点，不补建过去记录。签满全部30天的用户均有机会获得奖励，排名靠前的用户可能另外获得奖励，具体细则以清浅安排为准。
 
-签到record为`{ dayIndex, checkedInAt, scoreSeconds }`，时间采用UTC ISO字符串，页面转为北京时间。scoreSeconds采用延长时钟：06:00为21600秒，次日01:00为90000秒（25:00）；完成30天者按整数总分排序，用总分判定并列，排名为1、1、3，并列第一winner=true。公示响应包含items、total、page、pageSize、qualifiedTotal；items为用户UID、昵称、已签天数、平均时间、rank与winner。未签满者rank及公开均值为null，不能获奖；无记录账号不入榜。
+| 方法   | 路径                                                      | 说明                                                                                                                                                                   |
+| ------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/check-in`                                           | 游客可读`event/events/serverNow/phase/dayIndex/nextTransitionAt/turnstileSiteKey`；登录者另有`me`。已设点按个人窗口，未设点或游客按全局阶段且`dayIndex=null`           |
+| PUT    | `/api/check-in/refresh-time`                              | 严格请求`{ refreshMinute: 整数 }`，成功返回最新状态；已锁定409 `CHECK_IN_REFRESH_LOCKED`，个人截止已到409 `CHECK_IN_ENDED`                                             |
+| PUT    | `/api/check-in/wechat`                                    | 请求`{ wechat: string或null }`；最多30个字母、数字、下划线或连字符，空串也清空；仅更新微信，不删除档案、不继承其他活动微信                                             |
+| POST   | `/api/check-in`                                           | 请求`{ turnstileToken, dayIndex }`；首次成功201 `{ record }`，重复409且不覆盖首次时间；未设点409 `CHECK_IN_REFRESH_REQUIRED`                                           |
+| GET    | `/api/check-in/rankings`                                  | 公示前403，公示后游客可读；`page`默认1、`pageSize`默认24且最大100                                                                                                      |
+| GET    | `/api/admin/check-in`                                     | 未封禁管理员读取快照，支持`q`（昵称不区分大小写包含匹配或完整UID）、`state=in_progress/missed/completed`及分页                                                         |
+| GET    | `/api/admin/check-in/participants/:uid`                   | 管理员读取完整用户明细，真实零签到或未设点用户也可查；不存在404                                                                                                        |
+| PUT    | `/api/admin/check-in/participants/:uid/records/:dayIndex` | 管理员补录或改时间：`{ checkedInAt: 带时区ISO, reason?: string }`，整秒存储，必须在目标个人窗口内且不晚于活动时钟；分数由服务端计算                                    |
+| DELETE | `/api/admin/check-in/participants/:uid/records/:dayIndex` | 管理员撤销：`{ reason?: string }`，缺失404 `CHECK_IN_RECORD_NOT_FOUND`                                                                                                 |
+| PATCH  | `/api/admin/check-in/participants/:uid/profile`           | 管理员更正`{ wechat?: string或null, refreshMinute?: 整数, reason?: string }`，至少一个资料字段；已设点则仅追加未来刷新变更，无未来边界409 `CHECK_IN_NO_FUTURE_REFRESH` |
+| GET    | `/api/admin/check-in/logs`                                | 管理员查看按`createdAt desc,id desc`分页的日志，选填`userUid`限定目标；无修改/删除接口                                                                                 |
 
-后台支持q（昵称不区分大小写包含匹配或完整UID）、state（in_progress/missed/completed）及上述分页参数。响应包含snapshotAt、event、phase、dayIndex、全活动summary、固定30项daily和本页items；每人items带全部records及missedDayIndexes。搜索与状态筛选只改变items/total，不改变全活动汇总；今日待签不计漏签，未来记录不计入当前快照。活动期间rank=null、winner=false，结束后沿用全榜名次，搜索不重排名次。接口不公开邮箱、IP、人机验证token或secret；不提供成绩写入管理接口。
+`event`包含`id/debug/archived/startsOn/endsOn/startsAt/endsAt/rankingsAvailableAt/days/fixedRefreshMinute/scoreMode/rewardMode`。本期个人刷新，`scoreMode=elapsed`、`rewardMode=possible`；全局开始北京时间11月22日00:00，公示及全局结束12月22日23:59，不能用全局阶段替代个人阶段。旧活动为北京时间10月7日05:00至11月6日05:00、固定刷新分钟300、`extended_clock/first_place`。
 
-event额外包含debug布尔值：正常运行为false。开发环境设置`CHECK_IN_DEV_TIME`可提前进行真实链路验收，此时debug=true、event.id为`dev-2026-10-07`，serverNow与snapshotAt采用推进中的调试活动时间；记录、进度与排名均与正式活动隔离，仍必须通过真实Turnstile，不影响登录或token有效期。生产/自动测试环境禁止设置该参数。
+`record={ dayIndex, checkedInAt, scoreSeconds }`，所有时间戳为UTC ISO。新活动按个人窗口起点后整秒耗时计分，允许0秒；旧活动保留延长时钟，06:00为21600秒、次日01:00为90000秒。完整者按整数总分排名，并列为1、1、3，UID稳定排序；公开响应为`items/total/page/pageSize/qualifiedTotal`，未签满者`rank/averageTimeSeconds=null`。本期`winner`始终为null，不自动判断奖励；旧活动并列第一true、其他false。不同活动成绩、微信和搜索统计完全隔离。
 
-签到及后台状态响应均禁止HTTP缓存；后台需手动重新请求获取新情况，不提供推送或自动刷新。主要错误码：
+`me`含`records/completedDays/averageTimeSeconds/eligible/wechat/phase/dayIndex/dayStartsAt/nextTransitionAt/initialRefreshMinute/refreshMinute/refreshChanges/dayWindows/missedDayIndexes`。`initialRefreshMinute`保留最初确认值，未设点为null且本期`dayWindows=[]`；`refreshMinute`为当前实际生效分钟。每个窗口为`{ dayIndex, startsAt, endsAt, refreshMinute }`，起点含、截止不含；变更历史为`{ id, fromDayIndex, refreshMinute, createdAt }`，最大ID覆盖同一未来边界的安排。管理员改点只影响操作时刻之后的边界，交接日可缩短/延长，窗口连续，不增加第31次签到，不修改已有签到日期、时间和分数，也不重开已结束的个人活动。
 
-| HTTP | code                                             | 说明                                                       |
-| ---- | ------------------------------------------------ | ---------------------------------------------------------- |
-| 400  | TURNSTILE_FAILED                                 | token无效、过期、已消费，或action/hostname不符，需重新验证 |
-| 403  | CHECK_IN_RANKINGS_HIDDEN                         | 尚未到公示时间                                             |
-| 409  | CHECK_IN_NOT_STARTED / CHECK_IN_ENDED            | 不在活动签到期                                             |
-| 409  | CHECK_IN_ALREADY_DONE                            | 今日已签到                                                 |
-| 409  | CHECK_IN_DAY_CHANGED                             | 验证期间切日，刷新后重新验证                               |
-| 503  | TURNSTILE_NOT_CONFIGURED / TURNSTILE_UNAVAILABLE | 未配置或上游不可用，不写入签到                             |
+后台响应为`event/snapshotAt/phase/summary/daily/items/total/page/pageSize`，无顶层`dayIndex`。`daily`固定30项`{ dayIndex, checkIns, phase }`，本期按各用户个人日索引统计，阶段按可选分钟包络。`summary.todayCheckIns`统计各用户“自己的当前日已签人数”，全局未开始/结束为null。列表包含有本活动记录或本期已设点用户，仅填微信不算参与；零记录均值为null。每人明细含个人窗口、刷新历史、已结束且未签的日索引、状态及全榜名次。搜索/状态筛选只影响items/total，未来记录不计当前快照，公示前rank=null。
+
+管理员写入及对应审计日志在同一档案行锁事务中提交，日志失败全部回滚。原因选填、trim后最多500字，空值存null。完全无实际变更不写日志。日志保存当时真实操作者/目标UID及昵称、活动ID、`action=record_set/record_delete/profile_update`、原因、真实审计时间和结构化before/after；记录操作为`{ record: 记录或null }`，资料操作为`{ wechat, initialRefreshMinute, refreshChanges }`。删除用户不会删除既有日志。
+
+开发环境设置`CHECK_IN_DEV_TIME`时，响应debug=true，两个活动使用`dev-2026-11-22`和`dev-2026-10-07`，仅查询开发ID，不读写正式数据；前端使用响应中的ID。非调试模式不接受dev ID。模拟时钟只影响活动判断，不影响审计时间、认证或验证token有效期；生产/自动测试禁止设置此参数。
+
+所有状态与后台响应禁止HTTP缓存，后台需重新加载获取更正后的统计。其他主要错误码：400 `CHECK_IN_INVALID_TIME` / `TURNSTILE_FAILED`，403 `CHECK_IN_RANKINGS_HIDDEN`，409 `CHECK_IN_NOT_STARTED` / `CHECK_IN_ENDED` / `CHECK_IN_ALREADY_DONE` / `CHECK_IN_DAY_CHANGED`，503 `TURNSTILE_NOT_CONFIGURED` / `TURNSTILE_UNAVAILABLE`。失败写入不会产生成功日志。
 
 ## 错误响应
 

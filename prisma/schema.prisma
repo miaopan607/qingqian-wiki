@@ -76,13 +76,44 @@ model CheckInProfile {
   id        String   @id @default(cuid())
   eventId   String
   userUid   String
-  wechat    String
+  wechat    String?
+  refreshMinute Int?
+  refreshChanges CheckInRefreshChange[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userUid], references: [uid], onDelete: Cascade)
 
   @@unique([eventId, userUid])
   @@index([eventId])
+}
+
+model CheckInRefreshChange {
+  id Int @id @default(autoincrement())
+  eventId String
+  userUid String
+  fromDayIndex Int
+  refreshMinute Int
+  createdAt DateTime @default(now())
+  profile CheckInProfile @relation(fields: [eventId, userUid], references: [eventId, userUid], onDelete: Cascade)
+
+  @@index([eventId, userUid, id])
+}
+
+model CheckInAuditLog {
+  id String @id @default(cuid())
+  eventId String
+  actorUid String
+  actorName String
+  targetUid String
+  targetName String
+  action String
+  reason String?
+  before Json
+  after Json
+  createdAt DateTime @default(now())
+
+  @@index([eventId, createdAt, id])
+  @@index([eventId, targetUid, createdAt, id])
 }
 
 model ApiKey {

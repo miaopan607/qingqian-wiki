@@ -109,12 +109,50 @@ export type CheckInRecord = {
   scoreSeconds: number
 }
 
-export type CheckInProgress = {
+export type CheckInEvent = {
+  id: string
+  debug: boolean
+  archived: boolean
+  startsOn: string
+  endsOn: string
+  startsAt: string
+  endsAt: string
+  rankingsAvailableAt: string
+  days: 30
+  fixedRefreshMinute: number | null
+  scoreMode: 'extended_clock' | 'elapsed'
+  rewardMode: 'first_place' | 'possible'
+}
+
+export type CheckInRefreshChange = {
+  id: number
+  fromDayIndex: number
+  refreshMinute: number
+  createdAt: string
+}
+export type CheckInDayWindow = {
+  dayIndex: number
+  startsAt: string
+  endsAt: string
+  refreshMinute: number
+}
+export type CheckInWindow = {
+  phase: 'upcoming' | 'active' | 'ended'
+  dayIndex: number | null
+  dayStartsAt: string | null
+  nextTransitionAt: string | null
+}
+export type CheckInProgress = CheckInWindow & {
   records: CheckInRecord[]
   completedDays: number
   averageTimeSeconds: number | null
   eligible: boolean
   wechat: string | null
+  initialRefreshMinute: number | null
+  refreshMinute: number | null
+  refreshChanges: CheckInRefreshChange[]
+  dayWindows: CheckInDayWindow[]
+  missedDayIndexes: number[]
 }
 
 export type CheckInRankingItem = {
@@ -123,19 +161,28 @@ export type CheckInRankingItem = {
   completedDays: number
   averageTimeSeconds: number | null
   rank: number | null
-  winner: boolean
+  winner: boolean | null
 }
 
-export type AdminCheckInParticipant = {
+export type AdminCheckInParticipant = CheckInProgress & {
   userUid: string
   displayName: string
-  wechat: string | null
   userStatus: 'active' | 'banned'
-  completedDays: number
-  averageTimeSeconds: number
   state: 'in_progress' | 'missed' | 'completed'
-  missedDayIndexes: number[]
-  records: CheckInRecord[]
   rank: number | null
-  winner: boolean
+  winner: boolean | null
+}
+
+export type CheckInAuditLogItem = {
+  id: string
+  eventId: string
+  actorUid: string
+  actorName: string
+  targetUid: string
+  targetName: string
+  action: 'record_set' | 'record_delete' | 'profile_update'
+  reason: string | null
+  before: unknown
+  after: unknown
+  createdAt: string
 }

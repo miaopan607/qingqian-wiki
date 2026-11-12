@@ -1,5 +1,6 @@
 import type {
   AdminCheckInParticipant,
+  CheckInEvent,
   CheckInProgress,
   CheckInRecord,
   CheckInRankingItem,
@@ -67,14 +68,8 @@ export type CreateApiKeyInput = {
 }
 
 export type CheckInStatusResponse = {
-  event: {
-    id: string
-    debug: boolean
-    startsAt: string
-    endsAt: string
-    days: 30
-    rewardLabel: string
-  }
+  event: CheckInEvent
+  events: CheckInEvent[]
   serverNow: string
   phase: 'upcoming' | 'active' | 'ended'
   dayIndex: number | null
@@ -93,7 +88,6 @@ export type AdminCheckInResponse = Paginated<AdminCheckInParticipant> & {
   event: CheckInStatusResponse['event']
   snapshotAt: string
   phase: 'upcoming' | 'active' | 'ended'
-  dayIndex: number | null
   summary: {
     participants: number
     totalCheckIns: number
@@ -102,5 +96,5 @@ export type AdminCheckInResponse = Paginated<AdminCheckInParticipant> & {
     inProgressParticipants: number
     todayCheckIns: number | null
   }
-  daily: { dayIndex: number; checkIns: number; closed: boolean }[]
+  daily: { dayIndex: number; checkIns: number; phase: 'upcoming' | 'active' | 'ended' }[]
 }

@@ -14,6 +14,7 @@ import type {
   CheckInStatusResponse,
   SubmitCheckInResponse,
 } from '../../src/types/api'
+import { getCheckInDayWindows } from '../../src/lib/checkInSchedule'
 import type { AuthUser } from '../../src/types/entities'
 
 const mocks = vi.hoisted(() => ({
@@ -52,14 +53,34 @@ const user: AuthUser = {
   avatarUrl: null,
 }
 const event: CheckInStatusResponse['event'] = {
+  id: '2026-11-22',
+  debug: false,
+  archived: false,
+  startsOn: '2026-11-22',
+  endsOn: '2026-12-22',
+  startsAt: '2026-11-21T16:00:00.000Z',
+  endsAt: '2026-12-22T15:59:00.000Z',
+  rankingsAvailableAt: '2026-12-22T15:59:00.000Z',
+  days: 30,
+  fixedRefreshMinute: null,
+  scoreMode: 'elapsed',
+  rewardMode: 'possible',
+}
+const oldEvent: CheckInStatusResponse['event'] = {
   id: '2026-10-07',
   debug: false,
+  archived: true,
+  startsOn: '2026-10-07',
+  endsOn: '2026-11-06',
   startsAt: '2026-10-06T21:00:00.000Z',
   endsAt: '2026-11-05T21:00:00.000Z',
+  rankingsAvailableAt: '2026-11-05T21:00:00.000Z',
   days: 30,
-  rewardLabel: '活动奖励',
+  fixedRefreshMinute: 300,
+  scoreMode: 'extended_clock',
+  rewardMode: 'first_place',
 }
-const record = { dayIndex: 0, checkedInAt: '2026-10-06T22:00:00.000Z', scoreSeconds: 21600 }
+const record = { dayIndex: 0, checkedInAt: '2026-11-21T22:00:00.000Z', scoreSeconds: 3600 }
 let currentStatus: CheckInStatusResponse
 let ranking: CheckInRankingResponse
 let widgets: WidgetOptions[]
@@ -89,12 +110,28 @@ beforeEach(() => {
   widgets = []
   currentStatus = {
     event,
-    serverNow: '2026-10-06T22:00:00.000Z',
+    events: [event, oldEvent],
+    serverNow: '2026-11-21T22:00:00.000Z',
     phase: 'active',
     dayIndex: 0,
-    nextTransitionAt: '2026-10-07T21:00:00.000Z',
+    nextTransitionAt: '2026-11-22T21:00:00.000Z',
     turnstileSiteKey: 'configured-site-key',
-    me: { records: [], completedDays: 0, averageTimeSeconds: null, eligible: false, wechat: null },
+    me: {
+      records: [],
+      completedDays: 0,
+      averageTimeSeconds: null,
+      eligible: false,
+      wechat: null,
+      initialRefreshMinute: 300,
+      refreshMinute: 300,
+      refreshChanges: [],
+      dayWindows: getCheckInDayWindows(event, 300, []),
+      missedDayIndexes: [],
+      phase: 'active',
+      dayIndex: 0,
+      dayStartsAt: '2026-11-21T21:00:00.000Z',
+      nextTransitionAt: '2026-11-22T21:00:00.000Z',
+    },
   }
   ranking = { items: [], total: 0, page: 1, pageSize: 24, qualifiedTotal: 0 }
   mocks.fetchCurrentUser.mockResolvedValue(user)
@@ -173,9 +210,10 @@ describe('签到页面', () => {
     currentStatus = {
       ...currentStatus,
       me: {
+        ...currentStatus.me!,
         records: [record],
         completedDays: 1,
-        averageTimeSeconds: 21600,
+        averageTimeSeconds: 3600,
         eligible: false,
         wechat: null,
       },
@@ -183,8 +221,8 @@ describe('签到页面', () => {
     await act(async () => {
       submission.resolve({ record })
     })
-    expect(await screen.findByText(/签到成功：北京时间2026-10-07 06:00:00/)).toBeInTheDocument()
-    expect(await screen.findByText(/已签1\/30/)).toHaveTextContent('06:00:00')
+    expect(await screen.findByText(/签到成功：北京时间2026-11-22 06:00:00/)).toBeInTheDocument()
+    expect(await screen.findByText(/已签1\/30/)).toHaveTextContent('01:00:00')
     expect(await screen.findByText(/今日已签到/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '签到' })).not.toBeInTheDocument()
   })
@@ -193,7 +231,7 @@ describe('签到页面', () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'performance'],
     })
-    currentStatus = { ...currentStatus, serverNow: '2026-10-07T20:59:58.000Z' }
+    currentStatus = { ...currentStatus, serverNow: '2026-11-22T20:59:58.000Z' }
     renderPage()
     await act(async () => {
       await vi.advanceTimersByTimeAsync(50)
@@ -211,17 +249,18 @@ describe('签到页面', () => {
     expect(screen.queryByRole('button', { name: '签到' })).not.toBeInTheDocument()
     currentStatus = {
       ...currentStatus,
-      serverNow: '2026-10-07T21:00:00.000Z',
+      serverNow: '2026-11-22T21:00:00.000Z',
       dayIndex: 1,
-      nextTransitionAt: '2026-10-08T21:00:00.000Z',
+      nextTransitionAt: '2026-11-23T21:00:00.000Z',
+      me: { ...currentStatus.me!, missedDayIndexes: [0] },
     }
     await act(async () => {
       refreshedStatus.resolve(currentStatus)
     })
     const newButton = screen.getByRole('button', { name: '签到' })
     expect(newButton).toBeDisabled()
-    expect(screen.getByText(/今日签到日：10月8日/)).toBeInTheDocument()
-    expect(screen.getByText(/已有漏签，无法达成获奖条件/)).toBeInTheDocument()
+    expect(screen.getByText(/今日签到日：11月23日/)).toBeInTheDocument()
+    expect(screen.getByText(/已有漏签，尚未签满30天/)).toBeInTheDocument()
     act(() => oldWidget.callback('stale-token'))
     expect(newButton).toBeDisabled()
     act(() => widgets.at(-1)!.callback('today-token'))
@@ -241,6 +280,7 @@ describe('签到页面', () => {
     currentStatus = {
       ...currentStatus,
       me: {
+        ...currentStatus.me!,
         records: [record],
         completedDays: 1,
         averageTimeSeconds: record.scoreSeconds,
@@ -265,9 +305,10 @@ describe('签到页面', () => {
     currentStatus = {
       ...currentStatus,
       me: {
+        ...currentStatus.me!,
         records: [record],
         completedDays: 1,
-        averageTimeSeconds: 21600,
+        averageTimeSeconds: 3600,
         eligible: false,
         wechat: null,
       },
@@ -301,17 +342,17 @@ describe('签到页面', () => {
     expect(widgets).toHaveLength(0)
   })
 
-  it('未开始不显示挑战与排名，规则清楚说明凌晨计分', async () => {
+  it('个人未开始不显示挑战与排名，规则说明刷新后耗时计分', async () => {
     currentStatus = {
       ...currentStatus,
       phase: 'upcoming',
       dayIndex: null,
-      serverNow: '2026-10-06T20:00:00.000Z',
-      nextTransitionAt: event.startsAt,
+      serverNow: '2026-11-21T20:00:00.000Z',
+      nextTransitionAt: currentStatus.me!.dayWindows[0].startsAt,
     }
     renderPage()
     expect(await screen.findByText(/签到活动尚未开始/)).toBeInTheDocument()
-    expect(screen.getByText(/次日01:00记25:00/)).toBeInTheDocument()
+    expect(screen.getByText(/按个人每日刷新后耗时计分/)).toBeInTheDocument()
     expect(screen.getByText('活动结束后公示排名')).toBeInTheDocument()
     expect(screen.queryByText('最终签到排名')).not.toBeInTheDocument()
     expect(mocks.apiGet.mock.calls.some(([path]) => path === '/api/check-in/rankings')).toBe(false)
@@ -342,10 +383,11 @@ describe('签到页面', () => {
   it('排名加载失败保持明确错误，重试后展示真实榜单数据', async () => {
     currentStatus = {
       ...currentStatus,
+      event: oldEvent,
       phase: 'ended',
       dayIndex: null,
       nextTransitionAt: null,
-      serverNow: event.endsAt,
+      serverNow: oldEvent.endsAt,
     }
     let unavailable = true
     mocks.apiGet.mockImplementation((path: string) => {
@@ -387,12 +429,14 @@ describe('签到页面', () => {
     currentStatus = {
       ...currentStatus,
       dayIndex: 2,
-      serverNow: '2026-10-08T22:00:00.000Z',
-      nextTransitionAt: '2026-10-09T21:00:00.000Z',
+      serverNow: '2026-11-23T22:00:00.000Z',
+      nextTransitionAt: '2026-11-24T21:00:00.000Z',
       me: {
-        records: [{ dayIndex: 1, checkedInAt: '2026-10-08T17:00:00.000Z', scoreSeconds: 90000 }],
+        ...currentStatus.me!,
+        missedDayIndexes: [0],
+        records: [{ dayIndex: 1, checkedInAt: '2026-11-23T17:00:00.000Z', scoreSeconds: 72000 }],
         completedDays: 1,
-        averageTimeSeconds: 90000,
+        averageTimeSeconds: 72000,
         eligible: false,
         wechat: null,
       },
@@ -402,8 +446,8 @@ describe('签到页面', () => {
     expect(screen.getByText(/已有漏签/)).toBeInTheDocument()
     const signedDay = screen.getByText('已签 · 明细').closest('details')!
     fireEvent.click(within(signedDay).getByText('已签 · 明细'))
-    expect(within(signedDay).getByText('2026-10-09 01:00:00')).toBeInTheDocument()
-    expect(within(signedDay).getByText('25:00:00')).toBeInTheDocument()
+    expect(within(signedDay).getByText('2026-11-24 01:00:00')).toBeInTheDocument()
+    expect(within(signedDay).getByText('20:00:00')).toBeInTheDocument()
   })
 
   it('409今日已签会同步首次记录，而非继续用旧token提交', async () => {
@@ -417,15 +461,16 @@ describe('签到页面', () => {
     currentStatus = {
       ...currentStatus,
       me: {
+        ...currentStatus.me!,
         records: [record],
         completedDays: 1,
-        averageTimeSeconds: 21600,
+        averageTimeSeconds: 3600,
         eligible: false,
         wechat: null,
       },
     }
     fireEvent.click(button)
-    expect(await screen.findByText(/今日已签到：北京时间2026-10-07 06:00:00/)).toBeInTheDocument()
+    expect(await screen.findByText(/今日已签到：北京时间2026-11-22 06:00:00/)).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('今日已签到')
     expect(screen.queryByRole('button', { name: '签到' })).not.toBeInTheDocument()
   })
@@ -434,10 +479,11 @@ describe('签到页面', () => {
     mocks.fetchCurrentUser.mockResolvedValue(null)
     currentStatus = {
       ...currentStatus,
+      event: oldEvent,
       phase: 'ended',
       dayIndex: null,
       nextTransitionAt: null,
-      serverNow: event.endsAt,
+      serverNow: oldEvent.endsAt,
       me: null,
     }
     ranking = {
@@ -506,10 +552,11 @@ describe('签到页面', () => {
   it.each([false, true])('结束后明确展示空榜或无合格者（有参与者：%s）', async (hasParticipant) => {
     currentStatus = {
       ...currentStatus,
+      event: oldEvent,
       phase: 'ended',
       dayIndex: null,
       nextTransitionAt: null,
-      serverNow: event.endsAt,
+      serverNow: oldEvent.endsAt,
     }
     if (hasParticipant)
       ranking = {
@@ -537,6 +584,7 @@ describe('签到页面', () => {
     currentStatus = {
       ...currentStatus,
       me: {
+        ...currentStatus.me!,
         records: [],
         completedDays: 0,
         averageTimeSeconds: null,
@@ -552,7 +600,7 @@ describe('签到页面', () => {
     fireEvent.change(input, { target: { value: 'wx_qianqian_test' } })
     fireEvent.click(screen.getByRole('button', { name: '保存微信号' }))
     await waitFor(() =>
-      expect(mocks.apiRequest).toHaveBeenCalledWith('/api/check-in/wechat', {
+      expect(mocks.apiRequest).toHaveBeenCalledWith('/api/check-in/wechat?eventId=2026-11-22', {
         method: 'PUT',
         body: { wechat: 'wx_qianqian_test' },
       })
@@ -565,7 +613,7 @@ describe('签到展示格式', () => {
     expect(formatCheckInScore(90000)).toBe('25:00:00')
     expect(formatCheckInScore(104399)).toBe('28:59:59')
     expect(formatCheckInScore(21599.6)).toBe('06:00:00')
-    expect(getCheckInDateLabel(0)).toBe('10月7日')
-    expect(getCheckInDateLabel(29)).toBe('11月5日')
+    expect(getCheckInDateLabel(0, '2026-10-07')).toBe('10月7日')
+    expect(getCheckInDateLabel(29, '2026-10-07')).toBe('11月5日')
   })
 })

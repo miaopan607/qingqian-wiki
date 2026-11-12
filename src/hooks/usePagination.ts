@@ -5,16 +5,22 @@ type UsePaginationOptions = {
   total: number
   defaultPageSize: number
   pageSizeOptions: number[]
+  paramPrefix?: string
 }
 
 // 分页状态与 URL query 双向同步，方便分享与前进后退
-export function usePagination({ total, defaultPageSize, pageSizeOptions }: UsePaginationOptions) {
+export function usePagination({
+  total,
+  defaultPageSize,
+  pageSizeOptions,
+  paramPrefix = '',
+}: UsePaginationOptions) {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const pageSizeParam = Number(searchParams.get('pageSize'))
+  const pageSizeParam = Number(searchParams.get(`${paramPrefix}pageSize`))
   const pageSize = pageSizeOptions.includes(pageSizeParam) ? pageSizeParam : defaultPageSize
 
-  const pageParam = Number(searchParams.get('page'))
+  const pageParam = Number(searchParams.get(`${paramPrefix}page`))
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const page = Number.isInteger(pageParam) && pageParam >= 1 ? Math.min(pageParam, totalPages) : 1
 
@@ -26,18 +32,18 @@ export function usePagination({ total, defaultPageSize, pageSizeOptions }: UsePa
           const nextPage = next.page ?? page
           const nextPageSize = next.pageSize ?? pageSize
 
-          if (nextPage <= 1) params.delete('page')
-          else params.set('page', String(nextPage))
+          if (nextPage <= 1) params.delete(`${paramPrefix}page`)
+          else params.set(`${paramPrefix}page`, String(nextPage))
 
-          if (nextPageSize === defaultPageSize) params.delete('pageSize')
-          else params.set('pageSize', String(nextPageSize))
+          if (nextPageSize === defaultPageSize) params.delete(`${paramPrefix}pageSize`)
+          else params.set(`${paramPrefix}pageSize`, String(nextPageSize))
 
           return params
         },
         { replace: true }
       )
     },
-    [defaultPageSize, page, pageSize, setSearchParams]
+    [defaultPageSize, page, pageSize, paramPrefix, setSearchParams]
   )
 
   const setPage = useCallback(

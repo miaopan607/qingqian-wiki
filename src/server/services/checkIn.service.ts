@@ -1,56 +1,35 @@
-import { Prisma, type CheckIn } from '@prisma/client'
+import {
+  Prisma,
+  type CheckIn,
+  type CheckInProfile,
+  type CheckInRefreshChange as DbRefreshChange,
+} from '@prisma/client'
 import type { AdminCheckInResponse, CheckInRankingResponse } from '../../types/api'
-import type { AdminCheckInParticipant, CheckInProgress, CheckInRecord } from '../../types/entities'
+import type {
+  AdminCheckInParticipant,
+  CheckInEvent,
+  CheckInProgress,
+  CheckInRecord,
+  CheckInRefreshChange,
+} from '../../types/entities'
+import {
+  getCheckInDayWindows,
+  getCheckInWindow,
+  getGlobalCheckInWindow,
+} from '../../lib/checkInSchedule'
 import { prisma } from '../prisma'
-import { CHECK_IN_DEBUG } from './checkInClock.service'
+import { AppError } from '../utils/appError'
 
-export const CHECK_IN_EVENT_ID = CHECK_IN_DEBUG ? 'dev-2026-10-07' : '2026-10-07'
-export const CHECK_IN_START = new Date('2026-10-06T21:00:00.000Z')
-export const CHECK_IN_END = new Date('2026-11-05T21:00:00.000Z')
-export const CHECK_IN_DAYS = 30
-const DAY_MS = 86400000
-
-export const CHECK_IN_EVENT = {
-  id: CHECK_IN_EVENT_ID,
-  debug: CHECK_IN_DEBUG,
-  startsAt: CHECK_IN_START.toISOString(),
-  endsAt: CHECK_IN_END.toISOString(),
-  days: 30 as const,
-  rewardLabel: '活动奖励',
+export function getCheckInScoreSeconds(
+  now: Date,
+  dayStartsAt: Date,
+  scoreMode: CheckInEvent['scoreMode']
+): number {
+  return (
+    Math.floor((now.getTime() - dayStartsAt.getTime()) / 1000) +
+    (scoreMode === 'extended_clock' ? 18000 : 0)
+  )
 }
-
-export function getCheckInWindow(now: Date): {
-  phase: 'upcoming' | 'active' | 'ended'
-  dayIndex: number | null
-  dayStartsAt: Date | null
-  nextTransitionAt: Date | null
-} {
-  if (now < CHECK_IN_START) {
-    return {
-      phase: 'upcoming',
-      dayIndex: null,
-      dayStartsAt: null,
-      nextTransitionAt: CHECK_IN_START,
-    }
-  }
-  if (now >= CHECK_IN_END) {
-    return { phase: 'ended', dayIndex: null, dayStartsAt: null, nextTransitionAt: null }
-  }
-  const dayIndex = Math.floor((now.getTime() - CHECK_IN_START.getTime()) / DAY_MS)
-  const dayStartsAt = new Date(CHECK_IN_START.getTime() + dayIndex * DAY_MS)
-  return {
-    phase: 'active',
-    dayIndex,
-    dayStartsAt,
-    nextTransitionAt: new Date(dayStartsAt.getTime() + DAY_MS),
-  }
-}
-
-// 签到日从北京时间05:00起算，跨午夜继续累计到28:59:59。
-export function getCheckInScoreSeconds(now: Date, dayStartsAt: Date): number {
-  return 18000 + Math.floor((now.getTime() - dayStartsAt.getTime()) / 1000)
-}
-
 export function toCheckInRecord(record: CheckIn): CheckInRecord {
   return {
     dayIndex: record.dayIndex,
@@ -58,80 +37,132 @@ export function toCheckInRecord(record: CheckIn): CheckInRecord {
     scoreSeconds: record.scoreSeconds,
   }
 }
-
-export async function getCheckInProgress(userUid: string): Promise<CheckInProgress> {
-  const [records, profile] = await Promise.all([
-    prisma.checkIn.findMany({
-      where: { eventId: CHECK_IN_EVENT_ID, userUid },
-      orderBy: { dayIndex: 'asc' },
-    }),
-    prisma.checkInProfile.findUnique({
-      where: { eventId_userUid: { eventId: CHECK_IN_EVENT_ID, userUid } },
-      select: { wechat: true },
-    }),
-  ])
+export function toRefreshChange(change: DbRefreshChange): CheckInRefreshChange {
   return {
+    id: change.id,
+    fromDayIndex: change.fromDayIndex,
+    refreshMinute: change.refreshMinute,
+    createdAt: change.createdAt.toISOString(),
+  }
+}
+export type ProfileWithChanges = CheckInProfile & { refreshChanges: DbRefreshChange[] }
+
+export function buildCheckInProgress(
+  event: CheckInEvent,
+  now: Date,
+  records: CheckIn[],
+  profile: ProfileWithChanges | null
+): CheckInProgress {
+  const initialRefreshMinute = profile?.refreshMinute ?? null
+  const refreshChanges = profile?.refreshChanges.map(toRefreshChange) ?? []
+  const minute = event.fixedRefreshMinute ?? initialRefreshMinute
+  const dayWindows = minute === null ? [] : getCheckInDayWindows(event, minute, refreshChanges)
+  const window = dayWindows.length
+    ? getCheckInWindow(now, dayWindows)
+    : getGlobalCheckInWindow(event, now)
+  const signed = new Set(records.map((record) => record.dayIndex))
+  const missedDayIndexes = dayWindows
+    .filter((day) => Date.parse(day.endsAt) <= now.getTime() && !signed.has(day.dayIndex))
+    .map((day) => day.dayIndex)
+  let effectiveChange: CheckInRefreshChange | undefined
+  for (const change of refreshChanges) {
+    const at =
+      change.fromDayIndex === event.days
+        ? dayWindows.at(-1)?.endsAt
+        : dayWindows[change.fromDayIndex]?.startsAt
+    if (
+      at !== undefined &&
+      Date.parse(at) <= now.getTime() &&
+      (!effectiveChange || change.id > effectiveChange.id)
+    )
+      effectiveChange = change
+  }
+  return {
+    ...window,
     records: records.map(toCheckInRecord),
     completedDays: records.length,
     averageTimeSeconds: records.length
-      ? records.reduce((total, record) => total + record.scoreSeconds, 0) / records.length
+      ? records.reduce((sum, item) => sum + item.scoreSeconds, 0) / records.length
       : null,
-    eligible: records.length === CHECK_IN_DAYS,
+    eligible: records.length === event.days,
     wechat: profile?.wechat ?? null,
+    initialRefreshMinute,
+    refreshMinute:
+      event.fixedRefreshMinute ?? effectiveChange?.refreshMinute ?? initialRefreshMinute,
+    refreshChanges,
+    dayWindows,
+    missedDayIndexes,
   }
+}
+
+export async function getCheckInProgress(
+  userUid: string,
+  event: CheckInEvent,
+  now: Date
+): Promise<CheckInProgress> {
+  return prisma.$transaction(
+    async (tx) => {
+      const [records, profile] = await Promise.all([
+        tx.checkIn.findMany({
+          where: { eventId: event.id, userUid, checkedInAt: { lte: now } },
+          orderBy: { dayIndex: 'asc' },
+        }),
+        tx.checkInProfile.findUnique({
+          where: { eventId_userUid: { eventId: event.id, userUid } },
+          include: { refreshChanges: { orderBy: { id: 'asc' } } },
+        }),
+      ])
+      return buildCheckInProgress(event, now, records, profile)
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
+  )
+}
+
+// 所有写入共用档案行锁；锁后重读，保证配置、签到和审计前值一致。
+export async function lockCheckInProfile(
+  tx: Prisma.TransactionClient,
+  event: CheckInEvent,
+  userUid: string
+): Promise<ProfileWithChanges> {
+  const key = { eventId: event.id, userUid }
+  await tx.checkInProfile.upsert({
+    where: { eventId_userUid: key },
+    create: key,
+    update: { userUid },
+  })
+  await tx.$queryRaw`SELECT "id" FROM "CheckInProfile" WHERE "eventId" = ${event.id} AND "userUid" = ${userUid} FOR UPDATE`
+  return tx.checkInProfile.findUniqueOrThrow({
+    where: { eventId_userUid: key },
+    include: { refreshChanges: { orderBy: { id: 'asc' } } },
+  })
 }
 
 export async function setCheckInWechat(
   userUid: string,
-  wechat: string | null
+  wechat: string | null,
+  event: CheckInEvent
 ): Promise<string | null> {
-  if (wechat === null) {
-    await prisma.checkInProfile.deleteMany({
-      where: { eventId: CHECK_IN_EVENT_ID, userUid },
-    })
-    return null
-  }
-  const updated = await prisma.checkInProfile.upsert({
-    where: { eventId_userUid: { eventId: CHECK_IN_EVENT_ID, userUid } },
-    create: { eventId: CHECK_IN_EVENT_ID, userUid, wechat },
-    update: { wechat },
-    select: { wechat: true },
+  return prisma.$transaction(async (tx) => {
+    await lockCheckInProfile(tx, event, userUid)
+    return (
+      await tx.checkInProfile.update({
+        where: { eventId_userUid: { eventId: event.id, userUid } },
+        data: { wechat },
+      })
+    ).wechat
   })
-  return updated.wechat
 }
 
-function eventWhere(snapshotAt?: Date): Prisma.CheckInWhereInput {
-  return {
-    eventId: CHECK_IN_EVENT_ID,
-    dayIndex: { gte: 0, lt: CHECK_IN_DAYS },
-    ...(snapshotAt ? { checkedInAt: { lte: snapshotAt } } : {}),
-  }
-}
-
-async function loadParticipants(tx: Prisma.TransactionClient, snapshotAt?: Date) {
-  const groups = await tx.checkIn.groupBy({
-    by: ['userUid'],
-    where: eventWhere(snapshotAt),
-    _count: { _all: true },
-    _sum: { scoreSeconds: true },
-  })
-  return groups.map((group) => ({
-    userUid: group.userUid,
-    completedDays: group._count._all,
-    totalScore: group._sum.scoreSeconds ?? 0,
-  }))
-}
-
-type Participant = { userUid: string; completedDays: number; totalScore: number }
-
-// 先按完整活动总分定名次，再做筛选/分页，保证并列跨页不改变排名。
-function rankParticipants(participants: Participant[]): Map<string, number> {
+function rankParticipants(
+  participants: { userUid: string; completedDays: number; totalScore: number }[],
+  event: CheckInEvent
+): Map<string, number> {
   const qualified = participants
-    .filter((item) => item.completedDays === CHECK_IN_DAYS)
+    .filter((item) => item.completedDays === event.days)
     .sort((a, b) => a.totalScore - b.totalScore || a.userUid.localeCompare(b.userUid))
   const ranks = new Map<string, number>()
-  let rank = 0
-  let previousScore = -1
+  let rank = 0,
+    previousScore = -1
   qualified.forEach((item, index) => {
     if (item.totalScore !== previousScore) rank = index + 1
     ranks.set(item.userUid, rank)
@@ -140,167 +171,200 @@ function rankParticipants(participants: Participant[]): Map<string, number> {
   return ranks
 }
 
+export async function loadAdminCheckInParticipants(
+  tx: Prisma.TransactionClient,
+  event: CheckInEvent,
+  now: Date,
+  extraUid?: string
+): Promise<AdminCheckInParticipant[]> {
+  const users = await tx.user.findMany({
+    where: {
+      OR: [
+        { checkIns: { some: { eventId: event.id, checkedInAt: { lte: now } } } },
+        ...(event.fixedRefreshMinute === null
+          ? [{ checkInProfiles: { some: { eventId: event.id, refreshMinute: { not: null } } } }]
+          : []),
+        ...(extraUid ? [{ uid: extraUid }] : []),
+      ],
+    },
+    select: {
+      uid: true,
+      displayName: true,
+      status: true,
+      checkIns: {
+        where: { eventId: event.id, checkedInAt: { lte: now } },
+        orderBy: { dayIndex: 'asc' },
+      },
+      checkInProfiles: {
+        where: { eventId: event.id },
+        include: { refreshChanges: { orderBy: { id: 'asc' } } },
+      },
+    },
+  })
+  const ranks =
+    now.getTime() >= Date.parse(event.rankingsAvailableAt)
+      ? rankParticipants(
+          users.map((user) => ({
+            userUid: user.uid,
+            completedDays: user.checkIns.length,
+            totalScore: user.checkIns.reduce((sum, record) => sum + record.scoreSeconds, 0),
+          })),
+          event
+        )
+      : new Map<string, number>()
+  return users.map((user) => {
+    const progress = buildCheckInProgress(
+      event,
+      now,
+      user.checkIns,
+      user.checkInProfiles[0] ?? null
+    )
+    return {
+      ...progress,
+      userUid: user.uid,
+      displayName: user.displayName,
+      userStatus: user.status,
+      state: progress.eligible
+        ? 'completed'
+        : progress.missedDayIndexes.length
+          ? 'missed'
+          : 'in_progress',
+      rank: ranks.get(user.uid) ?? null,
+      winner: event.rewardMode === 'possible' ? null : ranks.get(user.uid) === 1,
+    }
+  })
+}
+
+export async function getAdminCheckInParticipant(
+  userUid: string,
+  event: CheckInEvent,
+  now: Date,
+  tx?: Prisma.TransactionClient
+): Promise<AdminCheckInParticipant> {
+  const load = async (client: Prisma.TransactionClient) => {
+    const participant = (await loadAdminCheckInParticipants(client, event, now, userUid)).find(
+      (item) => item.userUid === userUid
+    )
+    if (!participant) throw new AppError('用户不存在', 404, 'USER_NOT_FOUND')
+    return participant
+  }
+  return tx
+    ? load(tx)
+    : prisma.$transaction(load, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
+}
+
 export async function getCheckInRankings(
   page: number,
-  pageSize: number
+  pageSize: number,
+  event: CheckInEvent
 ): Promise<CheckInRankingResponse> {
-  const participants = await loadParticipants(prisma)
-  const ranks = rankParticipants(participants)
-  participants.sort((a, b) => {
-    const ar = ranks.get(a.userUid),
-      br = ranks.get(b.userUid)
-    if (ar !== undefined || br !== undefined)
-      return (ar ?? Infinity) - (br ?? Infinity) || a.userUid.localeCompare(b.userUid)
-    return b.completedDays - a.completedDays || a.userUid.localeCompare(b.userUid)
-  })
-  const selected = participants.slice((page - 1) * pageSize, page * pageSize)
-  const users = await prisma.user.findMany({
-    where: { uid: { in: selected.map((item) => item.userUid) } },
-    select: { uid: true, displayName: true },
-  })
-  const names = new Map(users.map((user) => [user.uid, user.displayName]))
-  return {
-    items: selected.map((item) => ({
-      userUid: item.userUid,
-      displayName: names.get(item.userUid)!,
-      completedDays: item.completedDays,
-      averageTimeSeconds: ranks.has(item.userUid) ? item.totalScore / CHECK_IN_DAYS : null,
-      rank: ranks.get(item.userUid) ?? null,
-      winner: ranks.get(item.userUid) === 1,
-    })),
-    total: participants.length,
-    qualifiedTotal: ranks.size,
-    page,
-    pageSize,
-  }
+  return prisma.$transaction(
+    async (tx) => {
+      const groups = await tx.checkIn.groupBy({
+        by: ['userUid'],
+        where: { eventId: event.id },
+        _count: { _all: true },
+        _sum: { scoreSeconds: true },
+      })
+      const participants = groups.map((group) => ({
+        userUid: group.userUid,
+        completedDays: group._count._all,
+        totalScore: group._sum.scoreSeconds ?? 0,
+      }))
+      const ranks = rankParticipants(participants, event)
+      participants.sort(
+        (a, b) =>
+          (ranks.get(a.userUid) ?? Infinity) - (ranks.get(b.userUid) ?? Infinity) ||
+          b.completedDays - a.completedDays ||
+          a.userUid.localeCompare(b.userUid)
+      )
+      const selected = participants.slice((page - 1) * pageSize, page * pageSize)
+      const users = await tx.user.findMany({
+        where: { uid: { in: selected.map((item) => item.userUid) } },
+        select: { uid: true, displayName: true },
+      })
+      const names = new Map(users.map((user) => [user.uid, user.displayName]))
+      return {
+        items: selected.map((item) => ({
+          userUid: item.userUid,
+          displayName: names.get(item.userUid)!,
+          completedDays: item.completedDays,
+          averageTimeSeconds: ranks.has(item.userUid) ? item.totalScore / event.days : null,
+          rank: ranks.get(item.userUid) ?? null,
+          winner: event.rewardMode === 'possible' ? null : ranks.get(item.userUid) === 1,
+        })),
+        total: participants.length,
+        qualifiedTotal: ranks.size,
+        page,
+        pageSize,
+      }
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead }
+  )
 }
 
 export async function getAdminCheckInSnapshot(
   snapshotAt: Date,
-  query: { page: number; pageSize: number; q?: string; state?: AdminCheckInParticipant['state'] }
+  query: { page: number; pageSize: number; q?: string; state?: AdminCheckInParticipant['state'] },
+  event: CheckInEvent
 ): Promise<AdminCheckInResponse> {
   return prisma.$transaction(
     async (tx) => {
-      const window = getCheckInWindow(snapshotAt)
-      const closedDays = window.phase === 'ended' ? CHECK_IN_DAYS : (window.dayIndex ?? 0)
-      const where = eventWhere(snapshotAt)
-      const signedDays = await tx.checkIn.findMany({
-        where,
-        select: { userUid: true, dayIndex: true, scoreSeconds: true },
-      })
-      const byUser = new Map<string, Participant & { days: Set<number> }>()
-      const counts = Array<number>(CHECK_IN_DAYS).fill(0)
-      for (const record of signedDays) {
-        let participant = byUser.get(record.userUid)
-        if (!participant) {
-          participant = {
-            userUid: record.userUid,
-            completedDays: 0,
-            totalScore: 0,
-            days: new Set(),
-          }
-          byUser.set(record.userUid, participant)
-        }
-        participant.completedDays += 1
-        participant.totalScore += record.scoreSeconds
-        participant.days.add(record.dayIndex)
-        counts[record.dayIndex] += 1
-      }
-      const participants = [...byUser.values()]
-      const ranks =
-        window.phase === 'ended' ? rankParticipants(participants) : new Map<string, number>()
-      const stateCounts = { completed: 0, missed: 0, in_progress: 0 }
-      const closedDayIndexes = Array.from({ length: closedDays }, (_, index) => index)
-      const enriched = participants.map((item) => {
-        const missedDayIndexes = closedDayIndexes.filter((index) => !item.days.has(index))
-        const state: AdminCheckInParticipant['state'] =
-          item.completedDays === CHECK_IN_DAYS
-            ? 'completed'
-            : missedDayIndexes.length
-              ? 'missed'
-              : 'in_progress'
-        stateCounts[state] += 1
-        return {
-          ...item,
-          missedDayIndexes,
-          state,
-          averageTimeSeconds: item.totalScore / item.completedDays,
-        }
-      })
-      let filtered = enriched
-      if (query.q) {
-        const matches = await tx.user.findMany({
-          where: {
-            checkIns: { some: where },
-            OR: [{ displayName: { contains: query.q, mode: 'insensitive' } }, { uid: query.q }],
-          },
-          select: { uid: true },
-        })
-        const ids = new Set(matches.map((user) => user.uid))
-        filtered = filtered.filter((item) => ids.has(item.userUid))
-      }
-      if (query.state) filtered = filtered.filter((item) => item.state === query.state)
-      filtered.sort((a, b) => {
-        const ar = ranks.get(a.userUid),
-          br = ranks.get(b.userUid)
-        if (ar !== undefined || br !== undefined)
-          return (ar ?? Infinity) - (br ?? Infinity) || a.userUid.localeCompare(b.userUid)
-        return (
-          b.completedDays - a.completedDays ||
-          a.averageTimeSeconds - b.averageTimeSeconds ||
-          a.userUid.localeCompare(b.userUid)
-        )
-      })
-      const selected = filtered.slice(
-        (query.page - 1) * query.pageSize,
-        query.page * query.pageSize
+      const participants = await loadAdminCheckInParticipants(tx, event, snapshotAt)
+      const global = getGlobalCheckInWindow(event, snapshotAt)
+      const filtered = participants.filter(
+        (item) =>
+          (!query.state || item.state === query.state) &&
+          (!query.q ||
+            item.userUid === query.q ||
+            item.displayName.toLocaleLowerCase().includes(query.q.toLocaleLowerCase()))
       )
-      const selectedIds = selected.map((item) => item.userUid)
-      const users = await tx.user.findMany({
-        where: { uid: { in: selectedIds } },
-        select: {
-          uid: true,
-          displayName: true,
-          status: true,
-          checkIns: { where, orderBy: { dayIndex: 'asc' } },
-          checkInProfiles: {
-            where: { eventId: CHECK_IN_EVENT_ID },
-            select: { wechat: true },
-          },
-        },
-      })
-      const userMap = new Map(users.map((user) => [user.uid, user]))
+      filtered.sort(
+        (a, b) =>
+          (a.rank ?? Infinity) - (b.rank ?? Infinity) ||
+          b.completedDays - a.completedDays ||
+          (a.averageTimeSeconds ?? Infinity) - (b.averageTimeSeconds ?? Infinity) ||
+          a.userUid.localeCompare(b.userUid)
+      )
+      const fixed = getCheckInDayWindows(event, event.fixedRefreshMinute ?? 0, [])
       return {
-        event: CHECK_IN_EVENT,
+        event,
         snapshotAt: snapshotAt.toISOString(),
-        phase: window.phase,
-        dayIndex: window.dayIndex,
+        phase: global.phase,
         summary: {
           participants: participants.length,
-          totalCheckIns: signedDays.length,
-          completedParticipants: stateCounts.completed,
-          missedParticipants: stateCounts.missed,
-          inProgressParticipants: stateCounts.in_progress,
-          todayCheckIns: window.dayIndex === null ? null : counts[window.dayIndex],
+          totalCheckIns: participants.reduce((sum, item) => sum + item.completedDays, 0),
+          completedParticipants: participants.filter((item) => item.state === 'completed').length,
+          missedParticipants: participants.filter((item) => item.state === 'missed').length,
+          inProgressParticipants: participants.filter((item) => item.state === 'in_progress')
+            .length,
+          todayCheckIns:
+            global.phase !== 'active'
+              ? null
+              : participants.filter(
+                  (item) =>
+                    item.dayIndex !== null &&
+                    item.records.some((record) => record.dayIndex === item.dayIndex)
+                ).length,
         },
-        daily: Array.from({ length: CHECK_IN_DAYS }, (_, dayIndex) => ({
-          dayIndex,
-          checkIns: counts[dayIndex],
-          closed: dayIndex < closedDays,
-        })),
-        items: selected.map((item) => ({
-          userUid: item.userUid,
-          displayName: userMap.get(item.userUid)!.displayName,
-          wechat: userMap.get(item.userUid)!.checkInProfiles[0]?.wechat ?? null,
-          userStatus: userMap.get(item.userUid)!.status,
-          completedDays: item.completedDays,
-          averageTimeSeconds: item.averageTimeSeconds,
-          state: item.state,
-          missedDayIndexes: item.missedDayIndexes,
-          records: userMap.get(item.userUid)!.checkIns.map(toCheckInRecord),
-          rank: ranks.get(item.userUid) ?? null,
-          winner: ranks.get(item.userUid) === 1,
-        })),
+        daily: fixed.map((day) => {
+          const startsAt = Date.parse(day.startsAt)
+          const endsAt =
+            Date.parse(day.endsAt) + (event.fixedRefreshMinute === null ? 1439 * 60000 : 0)
+          return {
+            dayIndex: day.dayIndex,
+            checkIns: participants.filter((item) =>
+              item.records.some((record) => record.dayIndex === day.dayIndex)
+            ).length,
+            phase:
+              snapshotAt.getTime() < startsAt
+                ? 'upcoming'
+                : snapshotAt.getTime() >= endsAt
+                  ? 'ended'
+                  : 'active',
+          }
+        }),
+        items: filtered.slice((query.page - 1) * query.pageSize, query.page * query.pageSize),
         total: filtered.length,
         page: query.page,
         pageSize: query.pageSize,

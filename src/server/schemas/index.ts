@@ -34,4 +34,12 @@ export {
   checkInBodySchema,
   adminCheckInQuerySchema,
   updateCheckInProfileSchema,
+  checkInEventQuerySchema,
+  checkInRankingQuerySchema,
+  checkInRefreshSchema,
+  adminCheckInRecordSchema,
+  adminCheckInDeleteSchema,
+  adminCheckInProfileSchema,
+  checkInLogsQuerySchema,
+  checkInDayIndexSchema,
 } from './checkIn.schema'

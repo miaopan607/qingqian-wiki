@@ -9,6 +9,8 @@ import { ToastProvider } from '../../src/components/Toast'
 import { AuthProvider } from '../../src/context/AuthContext'
 import { AppError } from '../../src/lib/errorHandler'
 import AdminCheckIn from '../../src/pages/admin/AdminCheckIn'
+import { getCheckInDayWindows } from '../../src/lib/checkInSchedule'
+import type { CheckInEvent } from '../../src/types/entities'
 import type { AdminCheckInResponse } from '../../src/types/api'
 import type { AdminCheckInParticipant, AuthUser } from '../../src/types/entities'
 
@@ -30,7 +32,33 @@ const admin: AuthUser = {
   bannedAt: null,
   avatarUrl: null,
 }
+const event: CheckInEvent = {
+  id: '2026-10-07',
+  debug: false,
+  archived: true,
+  startsOn: '2026-10-07',
+  endsOn: '2026-11-06',
+  startsAt: '2026-10-06T21:00:00.000Z',
+  endsAt: '2026-11-05T21:00:00.000Z',
+  rankingsAvailableAt: '2026-11-05T21:00:00.000Z',
+  days: 30,
+  fixedRefreshMinute: 300,
+  scoreMode: 'extended_clock',
+  rewardMode: 'first_place',
+}
+const progress = {
+  eligible: false,
+  phase: 'active' as const,
+  dayIndex: 2,
+  dayStartsAt: '2026-10-08T21:00:00.000Z',
+  nextTransitionAt: '2026-10-09T21:00:00.000Z',
+  initialRefreshMinute: null,
+  refreshMinute: 300,
+  refreshChanges: [],
+  dayWindows: getCheckInDayWindows(event, 300, []),
+}
 const participant: AdminCheckInParticipant = {
+  ...progress,
   userUid: 'participant-a',
   displayName: '早春',
   wechat: 'wx_zaochun_01',
@@ -48,6 +76,7 @@ const participant: AdminCheckInParticipant = {
   ],
 }
 const missedParticipant: AdminCheckInParticipant = {
+  ...progress,
   userUid: 'participant-b',
   displayName: '晚秋',
   wechat: null,
@@ -95,17 +124,9 @@ beforeEach(() => {
   responseError = null
   pendingSnapshot = null
   currentSnapshot = {
-    event: {
-      id: '2026-10-07',
-      debug: false,
-      startsAt: '2026-10-06T21:00:00.000Z',
-      endsAt: '2026-11-05T21:00:00.000Z',
-      days: 30,
-      rewardLabel: '活动奖励',
-    },
+    event,
     snapshotAt: '2026-10-08T22:00:00.000Z',
     phase: 'active',
-    dayIndex: 2,
     summary: {
       participants: 2,
       totalCheckIns: 4,
@@ -117,7 +138,7 @@ beforeEach(() => {
     daily: Array.from({ length: 30 }, (_, dayIndex) => ({
       dayIndex,
       checkIns: [1, 2, 1][dayIndex] ?? 0,
-      closed: dayIndex < 2,
+      phase: dayIndex < 2 ? 'ended' : dayIndex === 2 ? 'active' : 'upcoming',
     })),
     items: [participant, missedParticipant],
     total: 2,
@@ -126,6 +147,7 @@ beforeEach(() => {
   }
   mocks.fetchCurrentUser.mockResolvedValue(admin)
   mocks.apiGet.mockImplementation((path: string) => {
+    if (path === '/api/check-in') return Promise.resolve({ event, events: [event] })
     if (path !== '/api/admin/check-in') throw new Error(`未预期的接口：${path}`)
     if (responseError) return Promise.reject(responseError)
     return pendingSnapshot ?? Promise.resolve(currentSnapshot)
@@ -300,7 +322,6 @@ describe('后台签到快照', () => {
     currentSnapshot = {
       ...currentSnapshot,
       phase: 'ended',
-      dayIndex: null,
       snapshotAt: '2026-11-05T21:00:00.000Z',
       summary: { ...currentSnapshot.summary, todayCheckIns: null },
       items: [
@@ -346,7 +367,6 @@ describe('后台签到快照', () => {
     currentSnapshot = {
       ...currentSnapshot,
       phase: 'upcoming',
-      dayIndex: null,
       items: [],
       total: 0,
       summary: {
@@ -360,7 +380,7 @@ describe('后台签到快照', () => {
       daily: Array.from({ length: 30 }, (_, dayIndex) => ({
         dayIndex,
         checkIns: 0,
-        closed: false,
+        phase: 'upcoming',
       })),
     }
     renderPage()

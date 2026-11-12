@@ -1,6 +1,5 @@
 const DAY_MS = 86_400_000
 const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000
-const FIRST_DATE_UTC = Date.UTC(2026, 9, 7)
 
 // 延长时钟不对 24 小时取模，显示时才四舍五入到整秒。
 export function formatCheckInScore(seconds: number): string {
@@ -11,8 +10,8 @@ export function formatCheckInScore(seconds: number): string {
   return [hours, minutes, remainder].map((value) => String(value).padStart(2, '0')).join(':')
 }
 
-export function getCheckInDateLabel(dayIndex: number): string {
-  const date = new Date(FIRST_DATE_UTC + dayIndex * DAY_MS)
+export function getCheckInDateLabel(dayIndex: number, startsOn: string): string {
+  const date = new Date(Date.parse(`${startsOn}T00:00:00Z`) + dayIndex * DAY_MS)
   return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日`
 }
 
